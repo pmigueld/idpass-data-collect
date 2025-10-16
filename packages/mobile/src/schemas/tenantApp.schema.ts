@@ -20,7 +20,16 @@
 import { RxCollection, RxDocument, RxJsonSchema } from 'rxdb'
 import { Config } from '@/utils/dynamicFormIoUtils'
 
-export type TenantAppData = Config
+export type TenantAppData = Config & {
+  appVersion?: string
+  lastUpdated?: string
+  metadata?: {
+    author?: string
+    organization?: string
+    tags?: string[]
+    icon?: string
+  }
+}
 
 export const TenantAppSchema: RxJsonSchema<TenantAppData> = {
   title: 'TenantApp',
@@ -32,10 +41,21 @@ export const TenantAppSchema: RxJsonSchema<TenantAppData> = {
     name: { type: 'string', maxLength: 100 },
     description: { type: 'string' },
     version: { type: 'string' },
+    appVersion: { type: 'string' },
+    lastUpdated: { type: 'string' },
     url: { type: 'string', format: 'url' },
     entityForms: { type: 'array' },
     entityData: { type: 'array' },
-    syncServerUrl: { type: 'string', format: 'url' }
+    syncServerUrl: { type: 'string', format: 'url' },
+    metadata: {
+      type: 'object',
+      properties: {
+        author: { type: 'string' },
+        organization: { type: 'string' },
+        tags: { type: 'array', items: { type: 'string' } },
+        icon: { type: 'string' }
+      }
+    }
   },
   required: [
     'id',

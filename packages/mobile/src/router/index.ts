@@ -19,28 +19,28 @@
 
 import { extractParentUUIDInPath } from '@/utils/dynamicFormIoUtils'
 import { createRouter, createWebHistory } from 'vue-router'
-import DynamicHome from '@/views/dynamic/DyHome.vue'
+import TenantAppList from '@/views/TenantAppList.vue'
 import { useAuthManagerStore } from '@/store/authManager'
 
 const dynamicRouter = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', name: 'home', component: DynamicHome },
+    { path: '/', name: 'home', component: TenantAppList },
     {
       path: '/login/:id',
       name: 'login',
-      component: () => import('@/views/dynamic/DynamicLoginView.vue')
+      component: () => import('@/views/AuthLogin.vue')
     },
     {
       path: '/app/:id',
       name: 'app',
-      component: () => import('@/views/dynamic/DynamicAppView.vue'),
+      component: () => import('@/views/AppDashboard.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/app/:id/:rest(.+/)?:entity',
       name: 'entity',
-      component: () => import('@/views/dynamic/DynamicEntityView.vue'),
+      component: () => import('@/views/EntityList.vue'),
       props: (route) => {
         const id = route.params.id
         const rest = route.params.rest
@@ -61,7 +61,7 @@ const dynamicRouter = createRouter({
     {
       path: '/app/:id/:rest(.+/)?:entity/new',
       name: 'entity-new',
-      component: () => import('@/views/dynamic/DynamicNewView.vue'),
+      component: () => import('@/views/EntityCreate.vue'),
       props: (route) => {
         const id = route.params.id
         const entity = route.params.entity
@@ -75,29 +75,29 @@ const dynamicRouter = createRouter({
     {
       path: '/app/:id/:rest(.+/)?:entity/:guid/detail',
       name: 'entity-detail',
-      component: () => import('@/views/dynamic/DynamicDetailView.vue'),
+      component: () => import('@/views/EntityDetail.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/app/:id/:rest(.+/)?:entity/:guid/edit',
       name: 'entity-edit',
-      component: () => import('@/views/dynamic/DynamicEditView.vue'),
+      component: () => import('@/views/EntityEdit.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/app/:id/login',
       name: 'app-login',
-      component: () => import('@/views/dynamic/auth/AuthScreen.vue')
+      component: () => import('@/views/AuthLogin.vue')
     },
     {
       path: '/app/:id/oidc-login',
       name: 'oidc-login',
-      component: () => import('@/views/dynamic/auth/AuthScreen.vue')
+      component: () => import('@/views/AuthLogin.vue')
     },
     {
       path: '/callback',
       name: 'callback',
-      component: () => import('@/views/dynamic/auth/AuthScreen.vue')
+      component: () => import('@/views/AuthCallback.vue')
     }
   ]
 })

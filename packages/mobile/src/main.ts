@@ -30,6 +30,7 @@ import App from './App.vue'
 import DyApp from './DyApp.vue'
 import { createDatabase } from './database'
 import router from './router'
+import vuetify from './plugins/vuetify'
 import './style.css'
 import { useAuthManagerStore } from './store/authManager'
 
@@ -41,7 +42,7 @@ async function initApp() {
   const pinia = createPinia()
 
   const database = await createDatabase()
-  const app = createApp(AppComponent).use(database).use(pinia).use(router)
+  const app = createApp(AppComponent).use(database).use(pinia).use(vuetify).use(router)
 
   // Set up Capacitor URL listener for OAuth callbacks
   const authManager = useAuthManagerStore()

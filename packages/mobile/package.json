@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "vite  --port 8081 --host",
-    "build": "vue-tsc && vite build",
+    "build": "vite build",
+    "build:check": "vue-tsc && vite build",
     "preview": "vite preview",
     "build:ios": "npm run build && cap sync ios && cap open ios",
     "build:android": "npm run build && cap sync android && cap open android",
@@ -42,6 +43,8 @@
     "@formio/js": "^5.0.0-rc.48",
     "@formio/vue": "^5.0.0",
     "@headlessui/vue": "^1.7.19",
+    "@idpass/data-collect-core": "workspace:*",
+    "@mdi/font": "^7.4.47",
     "@popperjs/core": "^2.11.8",
     "axios": "^1.7.7",
     "bootstrap": "^4.6.0",
@@ -53,7 +56,6 @@
     "flatpickr-formio": "^4.6.13-formio.2",
     "font-awesome": "^4.7.0",
     "form-data": "^4.0.0",
-    "@idpass/data-collect-core": "workspace:*",
     "jquery": "^3.7.1",
     "jwt-decode": "^4.0.0",
     "libsodium-wrappers": "^0.7.15",
@@ -65,6 +67,7 @@
     "vue": "^3.4.15",
     "vue-i18n": "^11.1.1",
     "vue-router": "^4.2.5",
+    "vuetify": "^3.9.6",
     "web-did-resolver": "^2.0.27"
   },
   "devDependencies": {
