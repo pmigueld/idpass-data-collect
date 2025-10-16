@@ -19,18 +19,29 @@
 
 import { extractParentUUIDInPath } from '@/utils/dynamicFormIoUtils'
 import { createRouter, createWebHistory } from 'vue-router'
-import DynamicHome from '@/views/dynamic/DyHome.vue'
+import HomeView from '@/views/HomeView.vue'
 import { useAuthManagerStore } from '@/store/authManager'
 
 const dynamicRouter = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', name: 'home', component: DynamicHome },
+    // Home and Authentication Routes
+    { path: '/', name: 'home', component: HomeView },
     {
       path: '/login/:id',
       name: 'login',
       component: () => import('@/views/dynamic/DynamicLoginView.vue')
     },
+
+    // Tenant Application Routes
+    {
+      path: '/apps',
+      name: 'tenant-apps',
+      component: () => import('@/views/TenantAppsView.vue'),
+      meta: { requiresAuth: true }
+    },
+
+    // Legacy App Routes (keeping for backward compatibility)
     {
       path: '/app/:id',
       name: 'app',
@@ -38,8 +49,50 @@ const dynamicRouter = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/app/:id/login',
+      name: 'app-login',
+      component: () => import('@/views/dynamic/auth/AuthScreen.vue')
+    },
+    {
+      path: '/app/:id/oidc-login',
+      name: 'oidc-login',
+      component: () => import('@/views/dynamic/auth/AuthScreen.vue')
+    },
+
+    // Entity Management Routes
+    {
+      path: '/app/:id/:entity',
+      name: 'entity-list',
+      component: () => import('@/views/EntityListView.vue'),
+      props: true,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/app/:id/:entity/new',
+      name: 'entity-create',
+      component: () => import('@/views/EntityCreateView.vue'),
+      props: true,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/app/:id/:entity/:guid/detail',
+      name: 'entity-detail',
+      component: () => import('@/views/EntityDetailView.vue'),
+      props: true,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/app/:id/:entity/:guid/edit',
+      name: 'entity-edit',
+      component: () => import('@/views/EntityEditView.vue'),
+      props: true,
+      meta: { requiresAuth: true }
+    },
+
+    // Legacy Dynamic Routes (keeping for backward compatibility)
+    {
       path: '/app/:id/:rest(.+/)?:entity',
-      name: 'entity',
+      name: 'entity-legacy',
       component: () => import('@/views/dynamic/DynamicEntityView.vue'),
       props: (route) => {
         const id = route.params.id
@@ -60,7 +113,7 @@ const dynamicRouter = createRouter({
     },
     {
       path: '/app/:id/:rest(.+/)?:entity/new',
-      name: 'entity-new',
+      name: 'entity-new-legacy',
       component: () => import('@/views/dynamic/DynamicNewView.vue'),
       props: (route) => {
         const id = route.params.id
@@ -74,26 +127,18 @@ const dynamicRouter = createRouter({
     },
     {
       path: '/app/:id/:rest(.+/)?:entity/:guid/detail',
-      name: 'entity-detail',
+      name: 'entity-detail-legacy',
       component: () => import('@/views/dynamic/DynamicDetailView.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/app/:id/:rest(.+/)?:entity/:guid/edit',
-      name: 'entity-edit',
+      name: 'entity-edit-legacy',
       component: () => import('@/views/dynamic/DynamicEditView.vue'),
       meta: { requiresAuth: true }
     },
-    {
-      path: '/app/:id/login',
-      name: 'app-login',
-      component: () => import('@/views/dynamic/auth/AuthScreen.vue')
-    },
-    {
-      path: '/app/:id/oidc-login',
-      name: 'oidc-login',
-      component: () => import('@/views/dynamic/auth/AuthScreen.vue')
-    },
+
+    // OAuth Callback
     {
       path: '/callback',
       name: 'callback',

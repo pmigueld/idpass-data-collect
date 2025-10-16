@@ -5,7 +5,7 @@ import { store } from '@/store'
 import { EntityForm, getBreadcrumbFromPath } from '@/utils/dynamicFormIoUtils'
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ChevronRight from '@/components/icons/ChevronRight.vue'
+// Removed old component import
 import { EntityDoc } from '@idpass/data-collect-core'
 const route = useRoute()
 const router = useRouter()

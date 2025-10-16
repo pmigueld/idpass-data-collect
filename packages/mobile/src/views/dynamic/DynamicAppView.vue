@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ChevronRight from '@/components/icons/ChevronRight.vue'
+// Removed old component import
 import { TenantAppData } from '@/schemas/tenantApp.schema'
 import { store } from '@/store'
 import { EntityForm } from '@/utils/dynamicFormIoUtils'

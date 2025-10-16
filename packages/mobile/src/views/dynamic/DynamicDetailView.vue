@@ -3,8 +3,7 @@ import { useDatabase } from '@/database'
 import { TenantAppData } from '@/schemas/tenantApp.schema'
 import { store } from '@/store'
 import { EntityForm, getBreadcrumbFromPath } from '@/utils/dynamicFormIoUtils'
-import ViewDialog from '@/components/ViewDialog.vue'
-import ChevronRight from '@/components/icons/ChevronRight.vue'
+// Removed old component imports
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 

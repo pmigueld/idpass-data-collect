@@ -25,6 +25,12 @@ import 'flatpickr-formio/dist/flatpickr.min.css'
 import 'flatpickr-formio'
 import '@formio/js/dist/formio.full.min.css'
 
+// Vuetify
+import 'vuetify/styles'
+import { createVuetify } from 'vuetify'
+import { aliases, mdi } from 'vuetify/iconsets/mdi'
+import '@mdi/font/css/materialdesignicons.css'
+
 import { createApp } from 'vue'
 import App from './App.vue'
 import DyApp from './DyApp.vue'
@@ -35,13 +41,39 @@ import { useAuthManagerStore } from './store/authManager'
 
 import { createPinia } from 'pinia'
 
+const vuetify = createVuetify({
+  icons: {
+    defaultSet: 'mdi',
+    aliases,
+    sets: {
+      mdi,
+    },
+  },
+  theme: {
+    defaultTheme: 'light',
+    themes: {
+      light: {
+        colors: {
+          primary: '#1976D2',
+          secondary: '#424242',
+          accent: '#82B1FF',
+          error: '#FF5252',
+          info: '#2196F3',
+          success: '#4CAF50',
+          warning: '#FFC107',
+        },
+      },
+    },
+  },
+})
+
 async function initApp() {
   const isFeatureDynamicTurnedOn = import.meta.env.VITE_FEATURE_DYNAMIC
   const AppComponent = isFeatureDynamicTurnedOn ? DyApp : App
   const pinia = createPinia()
 
   const database = await createDatabase()
-  const app = createApp(AppComponent).use(database).use(pinia).use(router)
+  const app = createApp(AppComponent).use(database).use(pinia).use(router).use(vuetify)
 
   // Set up Capacitor URL listener for OAuth callbacks
   const authManager = useAuthManagerStore()

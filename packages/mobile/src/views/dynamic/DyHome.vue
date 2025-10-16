@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import ChevronRight from '@/components/icons/ChevronRight.vue'
-import Dialog from '@/components/SaveDialog.vue'
+// Removed old component imports
 import { useDatabase } from '@/database'
 import { TenantAppData } from '@/schemas/tenantApp.schema'
 import { Barcode, BarcodeScanner } from '@capacitor-mlkit/barcode-scanning'
