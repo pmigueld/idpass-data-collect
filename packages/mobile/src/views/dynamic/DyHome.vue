@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import ChevronRight from '@/components/icons/ChevronRight.vue'
-import Dialog from '@/components/SaveDialog.vue'
 import { useDatabase } from '@/database'
 import { TenantAppData } from '@/schemas/tenantApp.schema'
 import { Barcode, BarcodeScanner } from '@capacitor-mlkit/barcode-scanning'
 import { Camera } from '@capacitor/camera'
 import { Capacitor } from '@capacitor/core'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -14,10 +12,12 @@ const router = useRouter()
 const isMobile = ref(['android', 'ios'].includes(Capacitor.getPlatform()))
 const isGrantedPermissions = ref(false)
 const isDevelop = import.meta.env.VITE_DEVELOP === 'true'
+const loading = ref(false)
+const searchQuery = ref('')
 
 const database = useDatabase()
 const tenantapps = ref<TenantAppData[]>([])
-const openInputAppDialog = ref(false)
+const showAddAppDialog = ref(false)
 const appUrl = ref('')
 
 const tenantappsDb = database.tenantapps.find()
@@ -25,163 +25,363 @@ const tenantappsSub = tenantappsDb.$.subscribe((results) => {
   tenantapps.value = results
 })
 
+// Computed properties for filtering and statistics
+const filteredApps = computed(() => {
+  if (!searchQuery.value) return tenantapps.value
+  const query = searchQuery.value.toLowerCase()
+  return tenantapps.value.filter(app =>
+    app.name.toLowerCase().includes(query) ||
+    app.description.toLowerCase().includes(query)
+  )
+})
+
+const totalApps = computed(() => tenantapps.value.length)
+const onlineApps = computed(() => tenantapps.value.filter(app => app.syncServerUrl).length)
+
 onMounted(() => {})
 
 onUnmounted(() => {
   tenantappsSub.unsubscribe()
 })
 
-const devHandleClickClearData = async () => {
-  await database.tenantapps.remove()
-  localStorage.clear()
-  sessionStorage.clear()
-  //refresh the page
-  window.location.reload()
+// Enhanced app loading with better error handling
+const loadApp = async (url: string) => {
+  if (!url.trim()) {
+    throw new Error('Please enter a valid URL')
+  }
+
+  loading.value = true
+  try {
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`Failed to load app: ${response.status} ${response.statusText}`)
+    }
+
+    const json = await response.json()
+
+    // Validate the app configuration
+    if (!json.id || !json.name) {
+      throw new Error('Invalid app configuration: missing required fields')
+    }
+
+    await database.tenantapps.upsert({
+      ...json,
+      url, // Store the source URL for reference
+      lastUpdated: new Date().toISOString()
+    })
+
+    return json.name
+  } catch (error) {
+    console.error('Error loading app:', error)
+    throw error
+  } finally {
+    loading.value = false
+  }
 }
 
+// QR Code scanning with improved UX
 const requestPermissions = async (): Promise<boolean> => {
-  const { camera } = await Camera.requestPermissions()
-  return camera === 'granted' || camera === 'limited'
+  try {
+    const { camera } = await Camera.requestPermissions()
+    return camera === 'granted' || camera === 'limited'
+  } catch (error) {
+    console.error('Permission request failed:', error)
+    return false
+  }
 }
 
 const scanSingleBarcode = async (): Promise<Barcode> => {
-  // eslint-disable-next-line no-async-promise-executor
-  return new Promise(async (resolve) => {
-    document.querySelector('body')?.classList.add('barcode-scanner-active')
+  return new Promise(async (resolve, reject) => {
+    try {
+      document.querySelector('body')?.classList.add('barcode-scanner-active')
 
-    const listener = await BarcodeScanner.addListener('barcodeScanned', async (result) => {
-      await listener.remove()
+      const listener = await BarcodeScanner.addListener('barcodeScanned', async (result) => {
+        await listener.remove()
+        document.querySelector('body')?.classList.remove('barcode-scanner-active')
+        await BarcodeScanner.stopScan()
+        resolve(result.barcode)
+      })
+
+      await BarcodeScanner.startScan()
+    } catch (error) {
       document.querySelector('body')?.classList.remove('barcode-scanner-active')
-      await BarcodeScanner.stopScan()
-      resolve(result.barcode)
-    })
-
-    await BarcodeScanner.startScan()
+      reject(error)
+    }
   })
 }
 
-const scan = async () => {
+const scanQRCode = async () => {
   if (!isGrantedPermissions.value) {
     const granted = await requestPermissions()
     isGrantedPermissions.value = granted
     if (!granted) {
-      return
+      throw new Error('Camera permission is required to scan QR codes')
     }
   }
 
-  const code = await scanSingleBarcode()
-  const url = code.displayValue
-  return url
+  try {
+    const code = await scanSingleBarcode()
+    return code.displayValue
+  } catch (error) {
+    console.error('QR scan failed:', error)
+    throw new Error('Failed to scan QR code. Please try again.')
+  }
 }
 
-const loadApp = async (url: string) => {
-  try {
-    const response = await fetch(url)
-    const json = await response.json()
-    await database.tenantapps.upsert({
-      ...json
-    })
-  } catch (error) {
-    console.error(error)
-    alert('Error loading app')
+// Dialog handlers
+const handleAddApp = async () => {
+  if (isMobile.value) {
+    try {
+      const url = await scanQRCode()
+      const appName = await loadApp(url)
+      // Show success message
+      console.log(`Successfully loaded app: ${appName}`)
+    } catch (error) {
+      console.error('Failed to add app:', error)
+      // Show error message to user
+    }
+  } else {
+    showAddAppDialog.value = true
   }
 }
 
 const handleLoadAppFromInput = async () => {
-  await loadApp(appUrl.value)
-  openInputAppDialog.value = false
-}
-
-const handleClickAddApp = async () => {
-  let url = ''
-  if (isMobile.value) {
-    url = await scan()
-    await loadApp(url)
-    return
-  } else {
-    openInputAppDialog.value = true
+  try {
+    await loadApp(appUrl.value)
+    showAddAppDialog.value = false
+    appUrl.value = ''
+  } catch (error) {
+    console.error('Failed to load app from URL:', error)
+    // Show error message
   }
 }
 
+// Navigation
 const handleClickApp = (appId: string) => {
-  router.push('/app/' + appId)
+  router.push(`/app/${appId}`)
+}
+
+// Developer utilities
+const clearAllData = async () => {
+  try {
+    await database.tenantapps.remove()
+    localStorage.clear()
+    sessionStorage.clear()
+    window.location.reload()
+  } catch (error) {
+    console.error('Failed to clear data:', error)
+  }
+}
+
+// Format dates for display
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString()
 }
 </script>
 
 <template>
-  <div class="d-flex flex-column gap-2">
-    <h2 class="mb-4">Apps</h2>
-    <div v-show="!tenantapps.length" class="text-center mt-5">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="64"
-        height="64"
-        fill="currentColor"
-        class="bi bi-inbox mb-3 text-muted"
-        viewBox="0 0 16 16"
-      >
-        <path
-          d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4H4.98zm-1.17-.437A1.5 1.5 0 0 1 4.98 3h6.04a1.5 1.5 0 0 1 1.17.563l3.7 4.625a.5.5 0 0 1 .106.374l-.39 3.124A1.5 1.5 0 0 1 14.117 13H1.883a1.5 1.5 0 0 1-1.489-1.314l-.39-3.124a.5.5 0 0 1 .106-.374l3.7-4.625z"
-        />
-      </svg>
-      <p class="lead">No apps found</p>
-      <small color="grey" class="text-center d-flex align-items-center justify-content-center w-100"
-        >Hint: Download app config by clicking the camera icon.</small
-      >
+  <div class="tenant-apps-view">
+    <!-- Header Section -->
+    <div class="d-flex justify-space-between align-center mb-4">
+      <div>
+        <h1 class="text-h5 font-weight-bold mb-1">Tenant Applications</h1>
+        <p class="text-body-2 text-medium-emphasis mb-0">
+          {{ totalApps }} apps • {{ onlineApps }} with sync enabled
+        </p>
+      </div>
+
+      <!-- Search -->
+      <v-text-field
+        v-model="searchQuery"
+        prepend-inner-icon="mdi-magnify"
+        label="Search apps"
+        single-line
+        hide-details
+        density="comfortable"
+        variant="outlined"
+        class="max-width-300"
+      />
     </div>
-    <ul role="list" class="list-group list-group-flush shadow-sm mt-2">
-      <li v-for="app in tenantapps" :key="app.name" class="card border-0 rounded-0">
-        <div
-          class="card-body border-bottom d-flex justify-content-between align-items-center"
-          style="cursor: pointer"
+
+    <!-- Loading indicator -->
+    <v-progress-linear
+      v-if="loading"
+      indeterminate
+      color="primary"
+      class="mb-4"
+    />
+
+    <!-- Empty state -->
+    <v-card
+      v-if="!loading && filteredApps.length === 0 && !searchQuery"
+      class="modern-card text-center pa-8"
+      variant="tonal"
+    >
+      <v-icon size="64" color="primary" class="mb-4">mdi-apps</v-icon>
+      <h3 class="text-h6 mb-2">No Applications Found</h3>
+      <p class="text-body-1 text-medium-emphasis mb-4">
+        Get started by adding your first tenant application
+      </p>
+      <p class="text-body-2 text-medium-emphasis">
+        Scan a QR code or enter a configuration URL to begin
+      </p>
+    </v-card>
+
+    <!-- No search results -->
+    <v-card
+      v-else-if="!loading && filteredApps.length === 0 && searchQuery"
+      class="modern-card text-center pa-8"
+      variant="tonal"
+    >
+      <v-icon size="64" color="grey" class="mb-4">mdi-magnify</v-icon>
+      <h3 class="text-h6 mb-2">No Results Found</h3>
+      <p class="text-body-1 text-medium-emphasis">
+        No applications match your search for "{{ searchQuery }}"
+      </p>
+    </v-card>
+
+    <!-- Apps Grid/List -->
+    <v-row v-else-if="filteredApps.length > 0" class="mb-4">
+      <v-col
+        v-for="app in filteredApps"
+        :key="app.id"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <v-card
+          class="modern-card modern-list-item h-100"
+          variant="outlined"
           @click="handleClickApp(app.id)"
         >
-          <div>
-            <p class="m-0 lead fw-bold text-black">
-              {{ app.name }}
+          <v-card-text class="pa-4">
+            <div class="d-flex align-center mb-3">
+              <v-avatar color="primary" size="40" class="mr-3">
+                <span class="text-white font-weight-bold">
+                  {{ app.name.charAt(0).toUpperCase() }}
+                </span>
+              </v-avatar>
+
+              <div class="flex-grow-1">
+                <h3 class="text-h6 font-weight-bold mb-1 text-ellipsis">
+                  {{ app.name }}
+                </h3>
+                <p class="text-body-2 text-medium-emphasis mb-0">
+                  v{{ app.version }}
+                </p>
+              </div>
+
+              <v-icon color="primary">mdi-chevron-right</v-icon>
+            </div>
+
+            <p class="text-body-2 mb-3" style="min-height: 3rem;">
+              {{ app.description }}
             </p>
-          </div>
-          <ChevronRight />
+
+            <div class="d-flex justify-space-between align-center">
+              <v-chip
+                :color="app.syncServerUrl ? 'success' : 'warning'"
+                size="small"
+                variant="flat"
+              >
+                <v-icon start size="16">
+                  {{ app.syncServerUrl ? 'mdi-wifi' : 'mdi-wifi-off' }}
+                </v-icon>
+                {{ app.syncServerUrl ? 'Online' : 'Offline' }}
+              </v-chip>
+
+              <span class="text-caption text-medium-emphasis">
+                {{ formatDate(app.lastUpdated || new Date().toISOString()) }}
+              </span>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Add App FAB -->
+    <v-fab
+      app
+      location="bottom right"
+      color="primary"
+      @click="handleAddApp"
+    >
+      <v-icon>mdi-plus</v-icon>
+    </v-fab>
+
+    <!-- Add App Dialog -->
+    <v-dialog v-model="showAddAppDialog" max-width="500px">
+      <v-card>
+        <v-card-title>
+          <span class="text-h6">Add Application</span>
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" @click="showAddAppDialog = false" />
+        </v-card-title>
+
+        <v-card-text>
+          <v-text-field
+            v-model="appUrl"
+            label="Configuration URL"
+            placeholder="https://example.com/app-config.json"
+            variant="outlined"
+            :rules="[v => !!v || 'URL is required']"
+          />
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="showAddAppDialog = false">
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            :loading="loading"
+            @click="handleLoadAppFromInput"
+          >
+            Add Application
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Developer Tools (only in development) -->
+    <v-card v-if="isDevelop" class="mt-4" variant="tonal" color="error">
+      <v-card-text class="pa-3">
+        <div class="d-flex justify-space-between align-center">
+          <span class="text-body-2">Development Tools</span>
+          <v-btn
+            color="error"
+            size="small"
+            variant="outlined"
+            @click="clearAllData"
+          >
+            Clear All Data
+          </v-btn>
         </div>
-      </li>
-    </ul>
-
-    <button
-      v-if="isDevelop"
-      class="btn btn-danger my-2"
-      type="button"
-      @click="devHandleClickClearData"
-    >
-      Clear all data (dev)
-    </button>
+      </v-card-text>
+    </v-card>
   </div>
-
-  <Dialog
-    :open="openInputAppDialog"
-    :title="'Load App'"
-    @update:open="openInputAppDialog = $event"
-    :onSave="handleLoadAppFromInput"
-  >
-    <template #form-content>
-      <div class="mb-3">
-        <label for="appUrl" class="form-label">App URL</label>
-        <input type="text" class="form-control" id="appUrl" v-model="appUrl" />
-      </div>
-    </template>
-  </Dialog>
-  <button
-    class="btn btn-primary p-3 rounded-circle position-absolute"
-    style="bottom: 1rem; right: 1rem"
-    @click="handleClickAddApp"
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 512 512"
-      style="height: 2rem; width: 2rem; fill: #fff"
-    >
-      <path
-        d="M149.1 64.8L138.7 96H64C28.7 96 0 124.7 0 160V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H373.3L362.9 64.8C356.4 45.2 338.1 32 317.4 32H194.6c-20.7 0-39 13.2-45.5 32.8zM256 192a96 96 0 1 1 0 192 96 96 0 1 1 0-192z"
-      />
-    </svg>
-  </button>
 </template>
+
+<style scoped>
+.tenant-apps-view {
+  padding: 1rem;
+}
+
+.max-width-300 {
+  max-width: 300px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .tenant-apps-view {
+    padding: 0.5rem;
+  }
+
+  .max-width-300 {
+    max-width: none;
+    width: 100%;
+  }
+}
+</style>

@@ -1,48 +1,67 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
-@font-face {
-  font-family: 'FontAwesome';
-  src:
-    url('~@fortawesome/fontawesome-free/webfonts/fa-solid-900.woff2') format('woff2'),
-    url('~@fortawesome/fontawesome-free/webfonts/fa-solid-900.woff') format('woff'),
-    url('~@fortawesome/fontawesome-free/webfonts/fa-solid-900.ttf') format('truetype');
-  font-weight: 900;
-  font-style: normal;
-}
+/* Vuetify Material Design Icons */
+@import url('https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css');
 
-/* color palette from <https://github.com/vuejs/theme> */
+/* Color palette optimized for mobile */
 :root {
   --color-white: #ffffff;
-  --color-very-light-blue: #f9fafb;
-  --color-light-blue: #e6ecf6;
+  --color-very-light-blue: #f5f5f5;
+  --color-light-blue: #e3f2fd;
   --color-blue: #3264c8;
-  --color-medium-dark-blue: #59667d;
-  --color-dark-blue: #023a51;
-  --primary: #3264c8;
+  --color-medium-dark-blue: #546e7a;
+  --color-dark-blue: #263238;
+  --color-primary: #3264c8;
+  --color-secondary: #546e7a;
+  --color-accent: #00bcd4;
+  --color-surface: #ffffff;
+  --color-background: #f5f5f5;
+  --color-error: #f44336;
+  --color-success: #4caf50;
+  --color-warning: #ff9800;
+  --color-info: #2196f3;
 }
 
-/* semantic color variables for this project */
+/* Vuetify theme colors for this project */
 :root {
-  --color-bg: var(--color-blue);
-  --color-heading: var(--color-dark-blue);
-  --color-text: var(--color-medium-dark-blue);
-
-  --color-btn-primary: var(--color-white);
-  --color-btn-primary-bg: var(--color-blue);
-  --color-btn-default: var(--color-medium-dark-blue);
-  --color-btn-default-bg: var(--color-light-blue);
-  --color-card-bg: var(--color-blue);
+  --v-theme-primary: #3264c8;
+  --v-theme-secondary: #546e7a;
+  --v-theme-accent: #00bcd4;
+  --v-theme-surface: #ffffff;
+  --v-theme-background: #f5f5f5;
+  --v-theme-error: #f44336;
+  --v-theme-success: #4caf50;
+  --v-theme-warning: #ff9800;
+  --v-theme-info: #2196f3;
 }
 
-/* Link styles */
+/* Enhanced mobile-first styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Link styles compatible with Vuetify */
 a {
-  color: var(--primary);
+  color: var(--v-theme-primary);
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 a:hover {
   color: var(--color-dark-blue);
+}
+
+/* Custom focus styles for accessibility */
+.v-btn:focus-visible,
+.v-text-field:focus-visible {
+  outline: 2px solid var(--v-theme-primary);
+  outline-offset: 2px;
 }
 
 .safe-top {

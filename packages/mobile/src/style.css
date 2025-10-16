@@ -1,26 +1,16 @@
 @import './assets/css/base.css';
 
+/* Vuetify overrides and custom styles */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
-  margin: 0;
-  font-weight: normal;
 }
 
 body {
-  min-height: 100vh;
-  color: var(--color-text);
-  transition:
-    color 0.5s,
-    background-color 0.5s;
-  line-height: 1.6;
-  background: var(--color-very-light-blue);
-  font-family: Manrope, sans-serif;
-  font-size: 16px;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: 'Roboto', sans-serif !important;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 body.barcode-scanner-active {
@@ -32,45 +22,7 @@ body.barcode-scanner-active {
   visibility: visible;
 }
 
-.btn {
-  border-radius: 2rem;
-  border: none;
-  cursor: pointer;
-  font-family: Manrope, sans-serif;
-  outline: 0;
-  transition: opacity 0.2s;
-}
-
-.btn:hover {
-  opacity: 0.6;
-}
-
-.btn.btn-primary {
-  background-color: var(--color-btn-primary-bg);
-  color: var(--color-btn-primary);
-}
-
-button[type='submit'] {
-  margin-top: 1rem;
-}
-
-button[disabled] {
-  pointer-events: none;
-  user-select: none;
-}
-
-a[class] {
-  cursor: pointer;
-}
-
-div[class$='actions'] {
-  display: flex;
-  flex-direction: row;
-  gap: 2rem;
-  justify-content: center;
-  margin-block-start: 4rem;
-}
-
+/* Custom scrollbar styles */
 .disable-scrollbars {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -93,31 +45,86 @@ div[class$='actions'] {
   -ms-overflow-style: none;
 }
 
-#app {
-  background: transparent;
-  font-weight: normal;
+/* Safe area insets for mobile devices */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
 }
-.banner {
-  background-color: var(--color-btn-primary-bg);
-  color: var(--color-btn-primary);
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
-.title {
-  color: #343434;
+
+.safe-left {
+  padding-left: env(safe-area-inset-left);
 }
-.title p {
-  font-weight: 600;
-  font-size: 1rem;
+
+.safe-right {
+  padding-right: env(safe-area-inset-right);
 }
-.title small {
-  font-size: 0.75rem;
+
+/* Custom card styles */
+.modern-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease-in-out;
 }
-.search-form {
-  height: 50px;
-  border-radius: 10px;
+
+.modern-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
+
+/* Custom button styles */
+.modern-btn {
+  border-radius: 8px;
+  text-transform: none;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* List item styles */
+.modern-list-item {
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.modern-list-item:hover {
+  background-color: rgba(50, 100, 200, 0.04);
+}
+
+/* Text styles */
+.text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .capitalize {
   text-transform: capitalize;
 }
-.back-link {
-  color: var(--color-blue);
+
+/* Status indicators */
+.status-online {
+  color: #4caf50;
+}
+
+.status-offline {
+  color: #f44336;
+}
+
+.status-syncing {
+  color: #ff9800;
+}
+
+/* Custom gradients */
+.gradient-primary {
+  background: linear-gradient(135deg, #3264c8 0%, #023a51 100%);
+}
+
+.gradient-success {
+  background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+}
+
+.gradient-warning {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
 }
