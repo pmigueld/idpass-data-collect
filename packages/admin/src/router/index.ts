@@ -59,15 +59,41 @@ const router = createRouter({
       component: () => import('../views/ConfigCreateView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/entities',
+      name: 'entities',
+      component: () => import('../views/EntitiesView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/entities/:guid',
+      name: 'entity-detail',
+      component: () => import('../views/EntityDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/entities/:guid/events',
+      name: 'entity-events',
+      component: () => import('../views/EntityEventsView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: '/entities/:guid/audit-logs',
+      name: 'entity-audit-logs',
+      component: () => import('../views/EntityAuditLogsView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
   ],
 })
 
-// Navigation guard to check authentication
+// Navigation guard to check authentication and admin role
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next({ name: 'login' })
+  } else if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    next({ name: 'home' }) // Redirect non-admin users to home page
   } else {
     next()
   }

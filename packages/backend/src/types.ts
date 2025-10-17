@@ -89,6 +89,14 @@ export interface AuthConfig {
   fields: Record<string, string>;
 }
 
+export interface AppConfigVersion {
+  version: string;
+  createdAt: string;
+  createdBy?: string;
+  changes?: string;
+  isActive?: boolean;
+}
+
 export interface AppConfig {
   id: string;
   artifactId?: string;
@@ -100,6 +108,10 @@ export interface AppConfig {
   entityData?: EntityData[];
   externalSync?: ExternalSyncConfig;
   authConfigs?: AuthConfig[];
+  versionHistory?: AppConfigVersion[];
+  archived?: boolean;
+  archivedAt?: string;
+  gdprDeleted?: boolean;
 }
 
 export interface AppConfigStore {
@@ -109,6 +121,9 @@ export interface AppConfigStore {
   getConfigByArtifactId(artifactId: string): Promise<AppConfig>;
   saveConfig(config: AppConfig): Promise<void>;
   deleteConfig(id: string): Promise<void>;
+  getConfigVersions(id: string): Promise<AppConfigVersion[]>;
+  archiveConfig(id: string, piiFields?: string[]): Promise<void>;
+  getArchivedConfigs(): Promise<AppConfig[]>;
   clearStore(): Promise<void>;
   closeConnection(): Promise<void>;
 }

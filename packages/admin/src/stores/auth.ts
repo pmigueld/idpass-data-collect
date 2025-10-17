@@ -25,10 +25,32 @@ import router from '@/router'
 const API_URL = import.meta.env.VITE_API_URL
 const LOGIN_URL = `${API_URL}/api/users/login`
 
+interface DecodedToken {
+  id: number;
+  email: string;
+  role?: string;
+  exp?: number;
+  iat?: number;
+}
+
+function decodeJWT(token: string): DecodedToken | null {
+  try {
+    const base64Payload = token.split('.')[1];
+    const payload = JSON.parse(atob(base64Payload));
+    return payload;
+  } catch (error) {
+    console.error('Failed to decode JWT:', error);
+    return null;
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
   // State
   const token = ref<string | null>(localStorage.getItem('token'))
-  const isAuthenticated = computed(() => !!token.value)
+  const currentUser = ref<DecodedToken | null>(null)
+  const isAuthenticated = computed(() => !!token.value && !!currentUser.value)
+  const userRole = computed(() => currentUser.value?.role || 'USER')
+  const isAdmin = computed(() => userRole.value === 'ADMIN')
 
   // Actions
   const setToken = (newToken: string | null) => {
@@ -37,9 +59,12 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('token', newToken)
       // Set the token in axios headers
       axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
+      // Decode and store user information
+      currentUser.value = decodeJWT(newToken)
     } else {
       localStorage.removeItem('token')
       delete axios.defaults.headers.common['Authorization']
+      currentUser.value = null
     }
   }
 
@@ -71,7 +96,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     token,
+    currentUser,
     isAuthenticated,
+    userRole,
+    isAdmin,
     login,
     logout,
     initializeAuth,
