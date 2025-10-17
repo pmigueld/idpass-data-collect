@@ -42,19 +42,19 @@ const router = createRouter({
       component: () => import('../views/LoginView.vue'),
     },
     {
-      path: '/create',
+      path: '/programs/create',
       name: 'create',
       component: () => import('../views/ConfigCreateView.vue'),
       meta: { requiresAuth: true },
     },
     {
-      path: '/edit/:id',
+      path: '/programs/edit/:id',
       name: 'edit',
       component: () => import('../views/ConfigCreateView.vue'),
       meta: { requiresAuth: true },
     },
     {
-      path: '/copy/:id',
+      path: '/programs/copy/:id',
       name: 'copy',
       component: () => import('../views/ConfigCreateView.vue'),
       meta: { requiresAuth: true },

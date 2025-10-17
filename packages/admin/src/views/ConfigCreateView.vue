@@ -174,7 +174,7 @@ const createConfig = async () => {
     )
 
     await createAppApi(formData)
-    snackBarStore.showSnackbar('Config created successfully', 'success')
+    snackBarStore.showSnackbar('Collection Program created successfully', 'success')
     router.push('/')
   } catch (error) {
     console.error('Error saving form:', error)
@@ -210,7 +210,7 @@ const updateConfig = async () => {
     )
 
     await updateAppApi(route.params.id as string, formData)
-    snackBarStore.showSnackbar('Config updated successfully', 'success')
+    snackBarStore.showSnackbar('Collection Program updated successfully', 'success')
     router.push('/')
   } catch (error) {
     console.error('Error updating config:', error)
@@ -349,17 +349,17 @@ const removeAuthConfig = (index: number) => {
     <v-container>
       <v-row>
         <v-col cols="12">
-          <h2 class="text-h4 mb-4">{{ isEdit ? 'Edit' : 'Create' }} Config</h2>
+          <h2 class="text-h4 mb-4">{{ isEdit ? 'Edit' : 'Create' }} Collection Program</h2>
           <v-form>
             <v-text-field
               v-model="form.name"
-              label="Name"
+              label="Program Name"
               required
               :error-messages="nameError"
             ></v-text-field>
             <v-text-field
               v-model="form.description"
-              label="Description"
+              label="Program Description"
               required
               :error-messages="descriptionError"
             ></v-text-field>
@@ -367,14 +367,14 @@ const removeAuthConfig = (index: number) => {
             <!-- VERSION -->
             <v-text-field
               v-model="form.version"
-              label="Version"
+              label="Program Version"
               required
               :error-messages="versionError"
             ></v-text-field>
 
-            <!-- ENTITY FORM -->
+            <!-- DATA COLLECTION FORMS -->
             <v-divider class="my-6"></v-divider>
-            <h2 class="text-h5 mb-4">Entity Forms</h2>
+            <h2 class="text-h5 mb-4">Data Collection Forms</h2>
             <v-alert v-if="entityFormsError" type="error" class="mb-4">
               {{ entityFormsError }}
             </v-alert>
@@ -432,11 +432,11 @@ const removeAuthConfig = (index: number) => {
               </span>
             </div>
 
-            <v-btn color="primary" @click="addEntityForm" class="mt-4">Add Entity Form</v-btn>
+            <v-btn color="primary" @click="addEntityForm" class="mt-4">Add Data Collection Form</v-btn>
 
             <!-- EXTERNAL SYNC -->
             <v-divider class="my-6"></v-divider>
-            <h2 class="text-h5 mb-4">External Sync</h2>
+            <h2 class="text-h5 mb-4">External System Sync</h2>
             <v-select
               clearable
               v-model="form.externalSync.type"
@@ -458,9 +458,9 @@ const removeAuthConfig = (index: number) => {
             ></v-text-field>
             <FieldsInput v-model="form.externalSync.extraFields" :as-array="true" />
 
-            <!-- AUTH CONFIG -->
+            <!-- AUTHENTICATION CONFIG -->
             <v-divider class="my-6"></v-divider>
-            <h2 class="text-h5 mb-4">Auth Config</h2>
+            <h2 class="text-h5 mb-4">Authentication Configuration</h2>
 
             <div v-for="(_, index) in form.authConfigs" :key="index">
               <v-row align="center" class="mb-0">
@@ -493,7 +493,7 @@ const removeAuthConfig = (index: number) => {
                 :error="authConfigsError[index]?.fieldsError"
               />
             </div>
-            <v-btn color="primary" @click="addAuthConfig" class="mb-4 mt-4">Add Auth Config</v-btn>
+              <v-btn color="primary" @click="addAuthConfig" class="mb-4 mt-4">Add Authentication Config</v-btn>
 
             <v-card-actions class="mt-4">
               <v-spacer></v-spacer>
@@ -501,7 +501,7 @@ const removeAuthConfig = (index: number) => {
                 variant="elevated"
                 color="success"
                 @click="isEdit ? updateConfig() : createConfig()"
-                >{{ isEdit ? 'Update Config' : 'Create Config' }}
+                >{{ isEdit ? 'Update Program' : 'Create Program' }}
               </v-btn>
             </v-card-actions>
           </v-form>

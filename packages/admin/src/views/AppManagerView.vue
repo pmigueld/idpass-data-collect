@@ -6,14 +6,14 @@ import {
   type AppListMeta,
   type AppListParams,
 } from '@/api'
-import AppCard from '@/components/AppCard.vue'
+import ProgramCard from '@/components/ProgramCard.vue'
 import { useAuthStore } from '@/stores/auth'
 import { AxiosError } from 'axios'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const authStore = useAuthStore()
 
-const apps = ref<AppListItem[]>([])
+const programs = ref<AppListItem[]>([])
 const meta = ref<AppListMeta>({
   total: 0,
   page: 1,
@@ -50,12 +50,12 @@ const pageSizeOptions = [6, 12, 24, 48].map((value) => ({
   value,
 }))
 
-const hasNoResults = computed(() => !isLoading.value && apps.value.length === 0)
-const totalApps = computed(() => meta.value.total)
+const hasNoResults = computed(() => !isLoading.value && programs.value.length === 0)
+const totalPrograms = computed(() => meta.value.total)
 
 let searchDebounce: ReturnType<typeof setTimeout> | undefined
 
-const fetchApps = async () => {
+const fetchPrograms = async () => {
   isLoading.value = true
   try {
     const response = await getAppsApi({
@@ -65,7 +65,7 @@ const fetchApps = async () => {
       sortOrder: sortOrder.value,
       search: searchTerm.value.trim() || undefined,
     })
-    apps.value = response.data
+    programs.value = response.data
     meta.value = response.meta
     if (page.value !== response.meta.page) {
       page.value = response.meta.page
@@ -78,29 +78,29 @@ const fetchApps = async () => {
       authStore.logout()
       return
     }
-    console.error('Error fetching apps:', error)
+    console.error('Error fetching programs:', error)
   } finally {
     isLoading.value = false
   }
 }
 
 watch(page, () => {
-  fetchApps()
+  fetchPrograms()
 })
 
 watch(pageSize, () => {
   page.value = 1
-  fetchApps()
+  fetchPrograms()
 })
 
 watch(sortBy, () => {
   page.value = 1
-  fetchApps()
+  fetchPrograms()
 })
 
 watch(sortOrder, () => {
   page.value = 1
-  fetchApps()
+  fetchPrograms()
 })
 
 watch(
@@ -111,12 +111,12 @@ watch(
     }
     searchDebounce = setTimeout(() => {
       page.value = 1
-      fetchApps()
+      fetchPrograms()
     }, 300)
   },
 )
 
-const uploadAppConfig = async () => {
+const uploadProgramConfig = async () => {
   if (!selectedFile.value) return
 
   try {
@@ -126,7 +126,7 @@ const uploadAppConfig = async () => {
         const json = JSON.parse(event.target?.result as string)
 
         if (!json || typeof json !== 'object') {
-          throw new Error('Invalid app configuration format')
+          throw new Error('Invalid program configuration format')
         }
 
         const formData = new FormData()
@@ -141,7 +141,7 @@ const uploadAppConfig = async () => {
         await createAppApi(formData)
         selectedFile.value = null
         fileError.value = null
-        await fetchApps()
+        await fetchPrograms()
       } catch (error) {
         if (error instanceof AxiosError && error.response?.status === 401) {
           authStore.logout()
@@ -149,7 +149,7 @@ const uploadAppConfig = async () => {
         }
         console.error('Error uploading configuration:', error)
         fileError.value =
-          error instanceof Error ? error.message : 'Error uploading app configuration'
+          error instanceof Error ? error.message : 'Error uploading program configuration'
       }
     }
 
@@ -161,12 +161,12 @@ const uploadAppConfig = async () => {
     fileReader.readAsText(selectedFile.value)
   } catch (error) {
     console.error('Error:', error)
-    fileError.value = 'Error uploading app configuration'
+    fileError.value = 'Error uploading program configuration'
   }
 }
 
 onMounted(() => {
-  fetchApps()
+  fetchPrograms()
 })
 
 onBeforeUnmount(() => {
@@ -177,91 +177,193 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <v-container>
-    <v-row>
-      <v-col cols="12">
-        <h2 class="text-h4 mb-4">Apps</h2>
+  <div class="dashboard-container">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+      <div class="d-flex justify-space-between align-center">
+        <div>
+          <h1 class="text-h3 font-weight-bold text-primary mb-2">
+            Collection Programs
+          </h1>
+          <p class="text-h6 text-medium-emphasis mb-0">
+            Manage your data collection programs and configurations
+          </p>
+        </div>
+        <v-btn
+          color="primary"
+          size="large"
+          prepend-icon="mdi-plus"
+          :to="{ name: 'create' }"
+          class="create-program-btn"
+        >
+          Create Program
+        </v-btn>
+      </div>
+    </div>
 
-        <!-- Upload Section -->
-        <v-card class="mb-4">
-          <v-card-text>
-            <v-file-input
-              v-model="selectedFile"
-              accept=".json"
-              label="Upload JSON Config File"
-              prepend-icon="mdi-upload"
-              :error-messages="fileError"
-              @change="uploadAppConfig"
-            ></v-file-input>
-          </v-card-text>
-        </v-card>
+    <!-- Upload Section -->
+    <v-card class="upload-card mb-6">
+      <v-card-text class="pa-6">
+        <div class="d-flex align-center">
+          <div class="flex-grow-1">
+            <h3 class="text-h6 mb-2">Upload Program Configuration</h3>
+            <p class="text-body-1 text-medium-emphasis mb-0">
+              Import a JSON configuration file to create a new collection program
+            </p>
+          </div>
+          <v-file-input
+            v-model="selectedFile"
+            accept=".json"
+            label="Choose JSON Config File"
+            prepend-icon="mdi-upload"
+            :error-messages="fileError"
+            @change="uploadProgramConfig"
+            class="upload-input"
+          />
+        </div>
+      </v-card-text>
+    </v-card>
 
-        <!-- Filters -->
-        <v-card class="mb-4">
-          <v-card-text>
-            <v-row dense>
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model="searchTerm"
-                  label="Search"
-                  prepend-inner-icon="mdi-magnify"
-                  clearable
-                  hint="Filter by name, or ID"
-                />
-              </v-col>
-              <v-col cols="12" sm="6" md="3">
-                <v-select
-                  v-model="sortBy"
-                  :items="sortByOptions"
-                  label="Sort By"
-                  item-title="title"
-                  item-value="value"
-                  density="comfortable"
-                />
-              </v-col>
-              <v-col cols="12" sm="6" md="3">
-                <v-select
-                  v-model="sortOrder"
-                  :items="sortOrderOptions"
-                  label="Order"
-                  item-title="title"
-                  item-value="value"
-                  density="comfortable"
-                />
-              </v-col>
-              <v-col cols="12" sm="6" md="2">
-                <v-select
-                  v-model="pageSize"
-                  :items="pageSizeOptions"
-                  label="Page Size"
-                  item-title="title"
-                  item-value="value"
-                  density="comfortable"
-                />
-              </v-col>
-              <v-col cols="12" class="text-end text-body-2">
-                <span>Total Apps: {{ totalApps }}</span>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
-
-        <v-progress-linear v-if="isLoading" class="mb-4" color="primary" indeterminate />
-
-        <!-- Apps List -->
-        <v-row v-if="apps.length">
-          <v-col v-for="app in apps" :key="app.id" cols="12" sm="6" md="4">
-            <AppCard :app="app" @app-deleted="fetchApps" />
+    <!-- Filters and Search -->
+    <v-card class="filters-card mb-6">
+      <v-card-text class="pa-6">
+        <v-row>
+          <v-col cols="12" md="4">
+            <v-text-field
+              v-model="searchTerm"
+              label="Search Programs"
+              prepend-inner-icon="mdi-magnify"
+              clearable
+              hint="Search by name, ID, or description"
+              persistent-hint
+            />
+          </v-col>
+          <v-col cols="12" sm="6" md="3">
+            <v-select
+              v-model="sortBy"
+              :items="sortByOptions"
+              label="Sort By"
+              item-title="title"
+              item-value="value"
+            />
+          </v-col>
+          <v-col cols="12" sm="6" md="3">
+            <v-select
+              v-model="sortOrder"
+              :items="sortOrderOptions"
+              label="Order"
+              item-title="title"
+              item-value="value"
+            />
+          </v-col>
+          <v-col cols="12" sm="6" md="2">
+            <v-select
+              v-model="pageSize"
+              :items="pageSizeOptions"
+              label="Show"
+              item-title="title"
+              item-value="value"
+            />
+          </v-col>
+          <v-col cols="12" class="text-end">
+            <v-chip size="large" color="primary" variant="outlined">
+              {{ totalPrograms }} Programs
+            </v-chip>
           </v-col>
         </v-row>
-        <v-alert v-else-if="hasNoResults" border="start" variant="tonal" type="info">
-          No apps found. Try adjusting your filters.
-        </v-alert>
+      </v-card-text>
+    </v-card>
 
-        <div v-if="meta.totalPages > 1" class="d-flex justify-center mt-6">
-          <v-pagination v-model="page" :length="meta.totalPages" total-visible="7" />
-        </div>
-      </v-col>
-    </v-row>
-  </v-container>
+    <!-- Loading Indicator -->
+    <v-progress-linear v-if="isLoading" color="primary" indeterminate class="mb-4" />
+
+    <!-- Programs Grid -->
+    <div v-if="programs.length" class="programs-grid">
+      <v-row>
+        <v-col v-for="program in programs" :key="program.id" cols="12" sm="6" lg="4">
+          <ProgramCard :program="program" @program-deleted="fetchPrograms" />
+        </v-col>
+      </v-row>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="hasNoResults" class="empty-state">
+      <v-card class="pa-8 text-center">
+        <v-icon size="80" color="grey-lighten-2" class="mb-4">mdi-package-variant-closed</v-icon>
+        <h3 class="text-h5 mb-2">No Programs Found</h3>
+        <p class="text-body-1 text-medium-emphasis mb-4">
+          {{ searchTerm ? 'Try adjusting your search terms or filters.' : 'Get started by creating your first collection program.' }}
+        </p>
+        <v-btn color="primary" :to="{ name: 'create' }" prepend-icon="mdi-plus">
+          Create Your First Program
+        </v-btn>
+      </v-card>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="meta.totalPages > 1" class="d-flex justify-center mt-8">
+      <v-pagination
+        v-model="page"
+        :length="meta.totalPages"
+        :total-visible="7"
+        color="primary"
+      />
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.dashboard-container {
+  min-height: 100vh;
+  padding: 2rem;
+  background-color: #f8f9fa;
+}
+
+.dashboard-header {
+  margin-bottom: 3rem;
+}
+
+.create-program-btn {
+  min-width: 200px;
+}
+
+.upload-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.upload-input {
+  max-width: 300px;
+}
+
+.filters-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.programs-grid {
+  margin-top: 2rem;
+}
+
+.empty-state {
+  margin-top: 4rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 1rem;
+  }
+
+  .dashboard-header .d-flex {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+
+  .create-program-btn {
+    width: 100%;
+    min-width: auto;
+  }
+}
+</style>
