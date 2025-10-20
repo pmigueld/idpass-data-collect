@@ -8,6 +8,7 @@ import { createApp as createAppApi, getApp, updateApp as updateAppApi } from '@/
 import FormBuilderDialog from '@/components/FormBuilderDialog.vue'
 import FieldsInput from '@/components/FieldsInput.vue'
 import { useSnackBarStore } from '@/stores/snackBar'
+import { parseOpenSppProgramSpecification } from '@/utils/openSppImport'
 
 type EntityForm = {
   name: string
@@ -70,6 +71,8 @@ const authConfigsError = ref<{
 }>({})
 const isValid = ref(false)
 const isReady = ref(false)
+const showImportDialog = ref(false)
+const importFile = ref<File | null>(null)
 
 onMounted(async () => {
   const id = route.params.id
@@ -342,6 +345,86 @@ const addAuthConfig = () => {
 const removeAuthConfig = (index: number) => {
   form.value.authConfigs.splice(index, 1)
 }
+
+const importSpecFromFile = async () => {
+  if (!importFile.value) {
+    snackBarStore.showSnackbar('Please select a file to import', 'error')
+    return
+  }
+
+  try {
+    const yamlText = await importFile.value.text()
+    const importResult = parseOpenSppProgramSpecification(yamlText)
+
+    // Map imported data to form
+    if (importResult.name) {
+      form.value.name = importResult.name
+    }
+    if (importResult.description) {
+      form.value.description = importResult.description
+    }
+    if (importResult.version) {
+      form.value.version = importResult.version
+    }
+    if (importResult.artifactId) {
+      form.value.artifactId = importResult.artifactId
+    }
+
+    // Import entity forms
+    if (importResult.entityForms.length > 0) {
+      form.value.entityForms = importResult.entityForms.map(ef => ({
+        name: ef.name,
+        title: ef.title,
+        dependsOn: ef.dependsOn || '',
+        formio: ef.formio
+      }))
+    }
+
+    // Import external sync configuration
+    if (importResult.externalSync) {
+      form.value.externalSync = {
+        type: importResult.externalSync.type,
+        url: importResult.externalSync.url,
+        extraFields: importResult.externalSync.extraFields.map(field => ({
+          name: field.key,
+          value: field.label
+        }))
+      }
+    }
+
+    // Show warnings if any
+    if (importResult.metadata?.warnings?.length) {
+      snackBarStore.showSnackbar(
+        `Imported with ${importResult.metadata.warnings.length} warning(s)`,
+        'warning'
+      )
+    } else {
+      snackBarStore.showSnackbar('OpenSPP specification imported successfully', 'success')
+    }
+
+    showImportDialog.value = false
+    importFile.value = null
+  } catch (error) {
+    console.error('Error importing OpenSPP specification:', error)
+    snackBarStore.showSnackbar(
+      `Failed to import specification: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      'error'
+    )
+  }
+}
+
+const triggerFileSelect = () => {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.yaml,.yml'
+  input.onchange = (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0]
+    if (file) {
+      importFile.value = file
+    }
+  }
+  input.click()
+}
 </script>
 
 <template>
@@ -371,6 +454,30 @@ const removeAuthConfig = (index: number) => {
               required
               :error-messages="versionError"
             ></v-text-field>
+
+            <!-- OPENSPP IMPORT -->
+            <v-divider class="my-6"></v-divider>
+            <h2 class="text-h5 mb-4">Import OpenSPP Specification</h2>
+            <v-btn
+              color="primary"
+              variant="outlined"
+              prepend-icon="mdi-file-upload"
+              @click="triggerFileSelect"
+              class="mb-2"
+            >
+              Select OpenSPP YAML File
+            </v-btn>
+            <span v-if="importFile" class="ml-4 text-body-2">
+              Selected: {{ importFile.name }}
+            </span>
+            <v-btn
+              v-if="importFile"
+              color="success"
+              @click="importSpecFromFile"
+              class="ml-2"
+            >
+              Import Specification
+            </v-btn>
 
             <!-- ENTITY FORM -->
             <v-divider class="my-6"></v-divider>

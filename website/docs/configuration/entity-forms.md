@@ -206,9 +206,125 @@ Forms can include conditional logic to show/hide fields based on other field val
 1. Navigate to the Config Create/Edit page
 2. In the "Entity Forms" section, click "Add Entity Form"
 3. Fill in the basic information:
-   - **Name**: Unique identifier (e.g., "household")
-   - **Title**: Display name (e.g., "Household Information")
-   - **Depends On**: Select parent form if creating a child entity
+   - **Name**: Unique i5. Design your form using the visual builder
+6. Save the form configuration
+
+### Importing OpenSPP Program Specifications
+
+The admin interface supports importing OpenSPP Program Specification files (v7 format) to automatically generate entity forms and external sync configurations. This feature streamlines the setup process for programs based on OpenSPP specifications.
+
+#### Supported OpenSPP v7 Features
+
+- **Program Metadata**: Name, description, version, and artifact ID
+- **Entity Definitions**: Automatic creation of entity forms from OpenSPP entities
+- **Field Types**: Support for standard and advanced field types
+- **Reference Tables**: Conversion of OpenSPP reference tables to Form.io select options
+- **External Systems**: Auto-configuration of external sync settings
+- **Derived Fields**: Display as annotations with CEL expressions for manual implementation
+
+#### Field Type Mapping
+
+| OpenSPP Type | Form.io Type | Notes |
+|-------------|-------------|-------|
+| `string` | `textfield` | Basic text input |
+| `text` | `textarea` | Multi-line text |
+| `number`, `integer`, `decimal` | `number` | Numeric input |
+| `boolean` | `checkbox` | True/false checkbox |
+| `date` | `datetime` | Date and time picker |
+| `enum` | `select` | Dropdown selection |
+| `admin_code` | `select` | Administrative code selection |
+| `currency` | `currency` | Currency input with formatting |
+| `phone` | `phoneNumber` | Phone number with input mask |
+| `email` | `email` | Email with validation |
+
+#### Import Process
+
+1. **Prepare OpenSPP YAML**: Ensure your OpenSPP specification follows v7 format
+2. **Upload File**: Click "Select OpenSPP YAML File" and choose your specification file
+3. **Review Import**: The system will automatically populate:
+   - Program name and description
+   - Entity forms based on OpenSPP entities
+   - External sync configuration from external systems
+4. **Review Warnings**: Check for any import warnings (unsupported fields, derived fields requiring manual implementation)
+5. **Manual Adjustments**: Make any necessary adjustments to the imported configuration
+6. **Save Configuration**: Save the final configuration
+
+#### Example OpenSPP YAML Structure
+
+```yaml
+program:
+  id: "social-protection-program"
+  name: "Social Protection Program"
+  description: "A comprehensive social protection initiative"
+  version: "1.0"
+  artifact_id: "spp-v1"
+
+entities:
+  - id: "household"
+    name: "household"
+    label: "Household"
+    fields:
+      - id: "household_id"
+        name: "household_id"
+        label: "Household ID"
+        type: "string"
+        required: true
+      - id: "address"
+        name: "address"
+        label: "Address"
+        type: "text"
+  - id: "individual"
+    name: "individual"
+    label: "Individual"
+    fields:
+      - id: "first_name"
+        name: "first_name"
+        label: "First Name"
+        type: "string"
+        required: true
+      - id: "age"
+        name: "age"
+        label: "Age"
+        type: "number"
+        constraints:
+          - type: "min"
+            value: 0
+          - type: "max"
+            value: 150
+
+external_systems:
+  - id: "education_system"
+    role: "evidence_provider"
+    interface:
+      type: "rest_api"
+    data_contract:
+      record_type: "enrollment"
+      key_fields: ["student_id", "school_code"]
+
+reference_tables:
+  - id: "education_levels"
+    description: "Education levels"
+    rows:
+      - id: "primary"
+        label: "Primary Education"
+      - id: "secondary"
+        label: "Secondary Education"
+
+derived_fields:
+  - id: "eligibility_score"
+    label: "Eligibility Score"
+    expression: "age >= 18 && income < 10000"
+    purpose: "Determines program eligibility"
+```
+
+#### Limitations and Manual Steps
+
+- **CEL Expressions**: Derived field expressions are displayed as annotations but require manual implementation
+- **Complex Logic**: Advanced business rules may need custom Form.io logic components
+- **External Sync URLs**: External system URLs must be manually configured after import
+- **Authentication**: External sync authentication settings require manual setup
+
+## Best Practices - **Depends On**: Select parent form if creating a child entity
 4. Click "Build Form" to open the Form.io builder
 5. Design your form using the visual builder
 6. Save the form configuration
