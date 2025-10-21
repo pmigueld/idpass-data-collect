@@ -29,9 +29,12 @@
     "ci:setup": "echo 'enable-pre-post-scripts=true' > .npmrc && echo 'auto-install-peers=true' >> .npmrc && echo 'strict-peer-dependencies=false' >> .npmrc",
     "ci:install": "pnpm run ci:setup && pnpm install",
     "prepare": "[ \"$CI\" != \"true\" ] && husky install || echo 'Skipping husky in CI'",
-    "pr-check": "pnpm run type-check && pnpm run lint && pnpm run test"
+    "pr-check": "pnpm run type-check && pnpm run lint && pnpm run test",
+    "test:e2e": "cypress run",
+    "test:e2e:open": "cypress open"
   },
   "devDependencies": {
+    "cypress": "^13.15.0",
     "glob": "^10.4.5",
     "husky": "^8.0.3",
     "lint-staged": "^15.5.2"

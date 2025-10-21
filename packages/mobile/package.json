@@ -42,9 +42,10 @@
     "@formio/js": "^5.0.0-rc.48",
     "@formio/vue": "^5.0.0",
     "@headlessui/vue": "^1.7.19",
+    "@idpass/data-collect-core": "workspace:*",
+    "@idpass/ui-components": "workspace:*",
     "@popperjs/core": "^2.11.8",
     "axios": "^1.7.7",
-    "bootstrap": "^4.6.0",
     "bs58": "^6.0.0",
     "did-jwt": "^8.0.4",
     "did-jwt-vc": "^4.0.4",
@@ -53,7 +54,6 @@
     "flatpickr-formio": "^4.6.13-formio.2",
     "font-awesome": "^4.7.0",
     "form-data": "^4.0.0",
-    "@idpass/data-collect-core": "workspace:*",
     "jquery": "^3.7.1",
     "jwt-decode": "^4.0.0",
     "libsodium-wrappers": "^0.7.15",
@@ -65,7 +65,8 @@
     "vue": "^3.4.15",
     "vue-i18n": "^11.1.1",
     "vue-router": "^4.2.5",
-    "web-did-resolver": "^2.0.27"
+    "web-did-resolver": "^2.0.27",
+    "xstate": "^5.18.1"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.9",
@@ -75,6 +76,7 @@
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-vue": "^5.2.4",
     "@vitest/ui": "^3.1.1",
+    "@xstate/vue": "^4.0.0",
     "dotenv": "^16.4.7",
     "eslint": "^9.22.0",
     "eslint-plugin-vue": "^10.0.0",
