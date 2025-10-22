@@ -166,6 +166,51 @@ The adapter implements environment-aware token validation:
 - Faster validation for browser environments
 - Relies on stored authentication state
 
+## Credential Verification
+
+The Keycloak adapter supports direct credential verification using the Resource Owner Password Credentials (ROPC) flow. This is useful for server-side authentication where you need to verify username/password combinations without browser redirects.
+
+### Method: `verifyCredentials(username, password)`
+
+Verifies user credentials directly against Keycloak and returns authentication tokens if successful.
+
+**Parameters:**
+- `username` (string): The username to verify
+- `password` (string): The password to verify
+
+**Returns:**
+- `Promise<AuthResult | null>`: Authentication result with tokens and user profile, or null if invalid
+
+**Flow:**
+1. Calls Keycloak's `/protocol/openid-connect/token` endpoint with `grant_type=password`
+2. If successful, retrieves user information from `/userinfo` endpoint
+3. Returns complete `AuthResult` with access token, refresh token, and user profile
+4. Returns `null` for invalid credentials (401) or other errors
+
+**Example:**
+
+```typescript
+const adapter = new KeycloakAuthAdapter(storage, config);
+await adapter.initialize();
+
+// Verify credentials
+const result = await adapter.verifyCredentials("fieldworker", "password123");
+
+if (result) {
+  console.log("Authentication successful");
+  console.log("Access token:", result.access_token);
+  console.log("User:", result.profile?.name);
+} else {
+  console.log("Invalid credentials");
+}
+```
+
+**Important Notes:**
+- Requires Direct Access Grants to be enabled in Keycloak client settings
+- Should only be used in trusted server-side environments
+- Not recommended for browser/mobile clients (use OAuth redirect flow instead)
+- Credentials are sent over HTTPS to Keycloak
+
 ## Usage Examples
 
 ### Basic Setup

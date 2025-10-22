@@ -105,6 +105,68 @@ export class KeycloakAuthAdapter implements AuthAdapter {
     return this.oidc.getStoredAuth();
   }
 
+  async verifyCredentials(username: string, password: string): Promise<AuthResult | null> {
+    try {
+      const tokenUrl = `${this.config.fields.authority}/protocol/openid-connect/token`;
+      const params = new URLSearchParams({
+        grant_type: 'password',
+        client_id: this.config.fields.client_id,
+        username: username,
+        password: password,
+        scope: this.config.fields.scope || 'openid profile email'
+      });
+
+      const response = await axios.post(tokenUrl, params.toString(), {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        timeout: 5000
+      });
+
+      if (response.status === 200 && response.data.access_token) {
+        // Parse the token to get user info
+        const accessToken = response.data.access_token;
+        const refreshToken = response.data.refresh_token;
+        
+        // Get user info from userinfo endpoint
+        const userinfoUrl = `${this.config.fields.authority}/protocol/openid-connect/userinfo`;
+        const userinfoResponse = await axios.get(userinfoUrl, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          },
+          timeout: 5000
+        });
+
+        const profile = userinfoResponse.data;
+
+        return {
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          expires_in: response.data.expires_in,
+          profile: {
+            sub: profile.sub,
+            name: profile.name || username,
+            email: profile.email,
+            preferred_username: profile.preferred_username || username
+          }
+        };
+      }
+
+      return null;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        // 401 means invalid credentials
+        if (error.response?.status === 401) {
+          return null;
+        }
+        console.error("Keycloak credential verification error:", error.response?.data || error.message);
+      } else {
+        console.error("Keycloak credential verification error:", error);
+      }
+      return null;
+    }
+  }
+
   private async checkTokenActive(token: string): Promise<boolean> {
     try {
       // Call Keycloak's userinfo endpoint to verify token is still active

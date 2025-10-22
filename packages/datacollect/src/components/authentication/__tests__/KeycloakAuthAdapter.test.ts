@@ -643,4 +643,210 @@ describe("KeycloakAuthAdapter", () => {
       consoleSpy.mockRestore();
     });
   });
+
+  describe("verifyCredentials", () => {
+    const mockAuthConfig: AuthConfig = {
+      type: "keycloak",
+      fields: {
+        authority: "https://keycloak.example.com/realms/test",
+        client_id: "test-client",
+        redirect_uri: "http://localhost:3000/callback",
+        scope: "openid profile email"
+      }
+    };
+
+    it("should verify valid credentials and return AuthResult", async () => {
+      const mockStorage = new InMemoryAuthStorageAdapter("test");
+      await mockStorage.initialize();
+      const adapter = new KeycloakAuthAdapter(mockStorage, mockAuthConfig);
+
+      const mockTokenResponse = {
+        status: 200,
+        data: {
+          access_token: "mock-access-token",
+          refresh_token: "mock-refresh-token",
+          expires_in: 3600
+        }
+      };
+
+      const mockUserInfoResponse = {
+        status: 200,
+        data: {
+          sub: "user-123",
+          name: "Test User",
+          email: "test@example.com",
+          preferred_username: "testuser"
+        }
+      };
+
+      mockedAxios.post.mockResolvedValue(mockTokenResponse);
+      mockedAxios.get.mockResolvedValue(mockUserInfoResponse);
+
+      const result = await adapter.verifyCredentials("testuser", "password123");
+
+      expect(result).not.toBeNull();
+      expect(result?.access_token).toBe("mock-access-token");
+      expect(result?.refresh_token).toBe("mock-refresh-token");
+      expect(result?.expires_in).toBe(3600);
+      expect(result?.profile?.name).toBe("Test User");
+      expect(result?.profile?.email).toBe("test@example.com");
+
+      expect(mockedAxios.post).toHaveBeenCalledWith(
+        "https://keycloak.example.com/realms/test/protocol/openid-connect/token",
+        expect.any(String),
+        expect.objectContaining({
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          timeout: 5000
+        })
+      );
+
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        "https://keycloak.example.com/realms/test/protocol/openid-connect/userinfo",
+        expect.objectContaining({
+          headers: {
+            'Authorization': 'Bearer mock-access-token'
+          },
+          timeout: 5000
+        })
+      );
+    });
+
+    it("should return null for invalid credentials (401)", async () => {
+      const mockStorage = new InMemoryAuthStorageAdapter("test");
+      await mockStorage.initialize();
+      const adapter = new KeycloakAuthAdapter(mockStorage, mockAuthConfig);
+
+      const error = {
+        response: {
+          status: 401,
+          data: { error: "invalid_grant" }
+        },
+        isAxiosError: true
+      };
+
+      mockedAxios.post.mockRejectedValue(error);
+      mockedAxios.isAxiosError.mockReturnValue(true);
+
+      const result = await adapter.verifyCredentials("testuser", "wrongpassword");
+
+      expect(result).toBeNull();
+    });
+
+    it("should return null and log error for network errors", async () => {
+      const mockStorage = new InMemoryAuthStorageAdapter("test");
+      await mockStorage.initialize();
+      const adapter = new KeycloakAuthAdapter(mockStorage, mockAuthConfig);
+
+      const networkError = {
+        response: {
+          status: 500,
+          data: { error: "server_error" }
+        },
+        message: "Network Error",
+        isAxiosError: true
+      };
+
+      mockedAxios.post.mockRejectedValue(networkError);
+      mockedAxios.isAxiosError.mockReturnValue(true);
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      const result = await adapter.verifyCredentials("testuser", "password123");
+
+      expect(result).toBeNull();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Keycloak credential verification error:",
+        expect.any(Object)
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should handle non-axios errors", async () => {
+      const mockStorage = new InMemoryAuthStorageAdapter("test");
+      await mockStorage.initialize();
+      const adapter = new KeycloakAuthAdapter(mockStorage, mockAuthConfig);
+
+      const genericError = new Error("Something went wrong");
+
+      mockedAxios.post.mockRejectedValue(genericError);
+      mockedAxios.isAxiosError.mockReturnValue(false);
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      const result = await adapter.verifyCredentials("testuser", "password123");
+
+      expect(result).toBeNull();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Keycloak credential verification error:",
+        genericError
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should return null when token endpoint returns success but no access_token", async () => {
+      const mockStorage = new InMemoryAuthStorageAdapter("test");
+      await mockStorage.initialize();
+      const adapter = new KeycloakAuthAdapter(mockStorage, mockAuthConfig);
+
+      const mockTokenResponse = {
+        status: 200,
+        data: {
+          // Missing access_token
+          expires_in: 3600
+        }
+      };
+
+      mockedAxios.post.mockResolvedValue(mockTokenResponse);
+
+      const result = await adapter.verifyCredentials("testuser", "password123");
+
+      expect(result).toBeNull();
+    });
+
+    it("should use default scope if not provided in config", async () => {
+      const configWithoutScope: AuthConfig = {
+        type: "keycloak",
+        fields: {
+          authority: "https://keycloak.example.com/realms/test",
+          client_id: "test-client",
+          redirect_uri: "http://localhost:3000/callback"
+        }
+      };
+
+      const mockStorage = new InMemoryAuthStorageAdapter("test");
+      await mockStorage.initialize();
+      const adapter = new KeycloakAuthAdapter(mockStorage, configWithoutScope);
+
+      const mockTokenResponse = {
+        status: 200,
+        data: {
+          access_token: "mock-access-token",
+          refresh_token: "mock-refresh-token",
+          expires_in: 3600
+        }
+      };
+
+      const mockUserInfoResponse = {
+        status: 200,
+        data: {
+          sub: "user-123",
+          name: "Test User",
+          email: "test@example.com",
+          preferred_username: "testuser"
+        }
+      };
+
+      mockedAxios.post.mockResolvedValue(mockTokenResponse);
+      mockedAxios.get.mockResolvedValue(mockUserInfoResponse);
+
+      await adapter.verifyCredentials("testuser", "password123");
+
+      // Check that the POST was called with default scope
+      const postCall = mockedAxios.post.mock.calls[0];
+      const params = postCall[1] as string;
+      expect(params).toContain("scope=openid+profile+email");
+    });
+  });
 }); 

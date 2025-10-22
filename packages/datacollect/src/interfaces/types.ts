@@ -789,6 +789,7 @@ export interface AuthAdapter {
   logout(): Promise<void>;
   validateToken(token: string): Promise<boolean>;
   handleCallback(): Promise<void>;
+  verifyCredentials?(username: string, password: string): Promise<AuthResult | null>;
 }
 
 export interface AuthStorageAdapter {

@@ -917,4 +917,13 @@ export class EntityDataManager {
       await this.authManager.handleCallback(type);
     }
   }
+
+  /**
+   * Gets the AuthManager instance.
+   *
+   * @returns The AuthManager instance or undefined if not configured.
+   */
+  getAuthManager(): AuthManager | undefined {
+    return this.authManager;
+  }
 }
