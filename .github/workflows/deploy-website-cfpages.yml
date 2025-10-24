@@ -7,7 +7,6 @@ on:
       - main
     paths:
       - 'website/**'
-  workflow_dispatch:
 
 jobs:
   deploy:
@@ -31,7 +30,7 @@ jobs:
           version: 8
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
         working-directory: ./website
 
       - name: Build website
