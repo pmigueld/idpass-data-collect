@@ -109,6 +109,139 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /auth/verify:
+    post:
+      tags:
+        - Authentication
+      summary: Verify Keycloak credentials
+      description: |
+        Verify user credentials against configured Keycloak realm. This endpoint supports both username/password 
+        and token-based verification. It can be used by external systems (like Odoo) to authenticate users 
+        before making sync requests.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [username, password]
+                  properties:
+                    configId:
+                      type: string
+                      default: default
+                      description: Application configuration ID
+                      example: default
+                    username:
+                      type: string
+                      description: Username to verify
+                      example: fieldworker
+                    password:
+                      type: string
+                      format: password
+                      description: Password to verify
+                      example: test123
+                - type: object
+                  required: [token]
+                  properties:
+                    configId:
+                      type: string
+                      default: default
+                      description: Application configuration ID
+                      example: default
+                    token:
+                      type: string
+                      description: Bearer token to verify
+                      example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+            examples:
+              usernamePassword:
+                summary: Username and password verification
+                value:
+                  username: fieldworker
+                  password: test123
+              token:
+                summary: Token verification
+                value:
+                  token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+              withConfigId:
+                summary: With specific config ID
+                value:
+                  configId: my-app
+                  username: fieldworker
+                  password: test123
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    description: Whether the credentials are valid
+                  username:
+                    type: string
+                    description: Username of the authenticated user (only present if valid)
+                  error:
+                    type: string
+                    description: Error message (only present if invalid)
+              examples:
+                validCredentials:
+                  summary: Valid credentials
+                  value:
+                    valid: true
+                    username: Field Worker
+                invalidCredentials:
+                  summary: Invalid credentials
+                  value:
+                    valid: false
+                    error: Invalid credentials
+                validToken:
+                  summary: Valid token
+                  value:
+                    valid: true
+        '400':
+          description: Bad request (missing or invalid parameters)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Both username and password must be provided
+        '404':
+          description: App instance not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: App instance not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Internal server error during authentication
+
   /users:
     get:
       tags:

@@ -261,8 +261,46 @@ export class AuthManager {
     return this.adapters[type]?.validateToken(token) ?? false;
   }
 
+  /**
+   * Verifies user credentials against a specific authentication provider.
+   *
+   * @param type The type of authentication provider (e.g., 'keycloak').
+   * @param username The username to verify.
+   * @param password The password to verify.
+   * @returns A Promise that resolves to an object with validation result.
+   */
+  async verifyCredentials(
+    type: string,
+    username: string,
+    password: string
+  ): Promise<{ valid: boolean; username?: string; error?: string }> {
+    const adapter = this.adapters[type];
+    if (!adapter || !adapter.verifyCredentials) {
+      return { valid: false, error: 'Auth adapter not found or does not support credential verification' };
+    }
+
+    try {
+      const result = await adapter.verifyCredentials(username, password);
+      return result
+        ? { valid: true, username: result.profile?.name || username }
+        : { valid: false, error: 'Invalid credentials' };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return { valid: false, error: errorMessage };
+    }
+  }
+
   getCurrentUser(): { id: string; username?: string } | null {
     return this.currentUser;
+  }
+
+  /**
+   * Gets the authentication configurations.
+   *
+   * @returns An array of authentication configurations.
+   */
+  getAuthConfigs(): AuthConfig[] {
+    return this.authConfigs;
   }
 
   /**

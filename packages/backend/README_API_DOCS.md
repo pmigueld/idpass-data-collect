@@ -61,6 +61,7 @@ The GitHub Actions workflow automatically:
 ### Authentication
 - `POST /api/users/login` - User authentication
 - `GET /api/users/check-token` - Token validation
+- `POST /api/auth/verify` - Verify Keycloak credentials (username/password or token)
 
 ### User Management (Admin only)
 - `GET /api/users` - List all users
@@ -102,6 +103,53 @@ curl -X POST http://localhost:3000/api/users/login \
     "email": "admin@hdm.example",
     "password": "your-password"
   }'
+```
+
+### Verifying Keycloak Credentials
+
+The `/api/auth/verify` endpoint allows external systems (like Odoo) to verify user credentials against configured Keycloak realms:
+
+```bash
+# Verify username/password
+curl -X POST http://localhost:3000/api/auth/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "fieldworker",
+    "password": "test123"
+  }'
+
+# Verify token
+curl -X POST http://localhost:3000/api/auth/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+
+# With specific config ID
+curl -X POST http://localhost:3000/api/auth/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "configId": "my-app",
+    "username": "fieldworker",
+    "password": "test123"
+  }'
+```
+
+**Response:**
+```json
+{
+  "valid": true,
+  "username": "Field Worker"
+}
+```
+
+or
+
+```json
+{
+  "valid": false,
+  "error": "Invalid credentials"
+}
 ```
 
 ## Multi-tenant Support
