@@ -17,12 +17,25 @@
  * under the License.
  */
 
+/**
+ * API type for Odoo communication.
+ * - "jsonrpc": Legacy JSON-RPC API (default, deprecated in Odoo 19+)
+ * - "rest": REST API endpoint (recommended for Odoo 19+)
+ */
+export type OdooApiType = "jsonrpc" | "rest";
+
 export interface OdooConfig {
   host: string;
   database: string;
   username: string;
   password: string;
   registrarGroup?: string;
+  /**
+   * API type to use for communication with Odoo.
+   * Defaults to "jsonrpc" for backward compatibility.
+   * Set to "rest" for Odoo 19+ compatibility.
+   */
+  apiType?: OdooApiType;
 }
 
 export interface OdooAuthResult {

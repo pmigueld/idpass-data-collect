@@ -17,9 +17,34 @@
  * under the License.
  */
 
-import axios from "axios";
+/**
+ * OdooClient - Client for communicating with Odoo/OpenSPP instances
+ * 
+ * MIGRATION NOTICE: Odoo 19+ deprecates the JSON-RPC endpoint (/jsonrpc).
+ * 
+ * To migrate to the REST API:
+ * 1. Update your OdooConfig to include apiType: "rest"
+ * 2. Test your integration with the new REST protocol
+ * 3. Remove apiType from config once migration is verified (it will default to "rest" in future versions)
+ * 
+ * Example:
+ * ```typescript
+ * const config: OdooConfig = {
+ *   host: "https://odoo.example.com",
+ *   database: "my_db",
+ *   username: "user",
+ *   password: "pass",
+ *   apiType: "rest"  // Use REST API for Odoo 19+
+ * };
+ * ```
+ * 
+ * See: https://www.odoo.com/documentation/19.0/developer/reference/external_api.html#migrating-from-xml-rpc-json-rpc
+ */
+
+import axios, { AxiosInstance } from "axios";
 import {
   OdooConfig,
+  OdooApiType,
   OdooBaseModel,
   OpenSPPGroup,
   OpenSPPHousehold,
@@ -49,20 +74,47 @@ type CallOptions = {
   context?: Record<string, unknown>;
 };
 
-export default class OdooClient {
-  private baseUrl = "";
-  private uid = 0;
-  private db: string;
-  private username: string;
-  private password: string;
-  private registrarGroup: string;
+/**
+ * Protocol abstraction for Odoo API communication.
+ * Supports both JSON-RPC (legacy, deprecated in Odoo 19+) and REST (Odoo 19+) protocols.
+ * 
+ * @deprecated JSON-RPC protocol is deprecated in Odoo 19+.
+ * Use the REST protocol by setting apiType: "rest" in OdooConfig.
+ * See: https://www.odoo.com/documentation/19.0/developer/reference/external_api.html#migrating-from-xml-rpc-json-rpc
+ */
+interface OdooProtocol {
+  authenticate(): Promise<number>;
+  call<T>(model: string, method: string, args: unknown[] = [], kwargs?: CallOptions): Promise<T>;
+  isAuthenticated(): boolean;
+}
 
-  constructor(config: OdooConfig) {
-    this.db = config.database;
-    this.username = config.username;
-    this.password = config.password;
-    this.registrarGroup = config.registrarGroup || "";
-    this.baseUrl = config.host;
+/**
+ * JSON-RPC protocol implementation (legacy, deprecated in Odoo 19+).
+ * 
+ * @deprecated This protocol uses the /jsonrpc endpoint which is deprecated in Odoo 19+.
+ * Migrate to RestProtocol by setting apiType: "rest" in OdooConfig.
+ */
+class JsonRpcProtocol implements OdooProtocol {
+  private uid = 0;
+  private axiosInstance: AxiosInstance;
+  
+  getUid(): number {
+    return this.uid;
+  }
+
+  constructor(
+    private baseUrl: string,
+    private db: string,
+    private username: string,
+    private password: string,
+  ) {
+    this.axiosInstance = axios.create({
+      baseURL: baseUrl,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
   }
 
   private generateRequestId(): number {
@@ -71,23 +123,17 @@ export default class OdooClient {
 
   private async makeRequest<T>(endpoint: string, data: Record<string, unknown>): Promise<T> {
     try {
-      const response = await axios.post<JsonRpcResponse<T>>(
-        `${this.baseUrl}${endpoint}`,
-        {
-          jsonrpc: "2.0",
-          id: this.generateRequestId(),
-          ...data,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-        },
-      );
+      const response = await this.axiosInstance.post<JsonRpcResponse<T>>(endpoint, {
+        jsonrpc: "2.0",
+        id: this.generateRequestId(),
+        ...data,
+      });
 
       if (response.data.error) {
-        const errorMsg = response.data.error.data?.message || response.data.error.message || "JSON-RPC request failed";
+        const errorMsg =
+          response.data.error.data?.message ||
+          response.data.error.message ||
+          "JSON-RPC request failed";
         throw new Error(errorMsg);
       }
 
@@ -98,9 +144,204 @@ export default class OdooClient {
       return response.data.result;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error?.data?.message || error.message || "Network request failed");
+        throw new Error(
+          error.response?.data?.error?.data?.message || error.message || "Network request failed",
+        );
       }
       throw error;
+    }
+  }
+
+  async authenticate(): Promise<number> {
+    const result = await this.makeRequest<number>("/jsonrpc", {
+      method: "call",
+      params: {
+        service: "common",
+        method: "authenticate",
+        args: [this.db, this.username, this.password, {}],
+      },
+    });
+
+    if (!result) {
+      throw new Error("Authentication failed");
+    }
+
+    this.uid = result;
+    return this.uid;
+  }
+
+  async call<T>(model: string, method: string, args: unknown[] = [], kwargs?: CallOptions): Promise<T> {
+    const executeArgs: unknown[] = [this.db, this.uid, this.password, model, method, args];
+    if (kwargs && Object.keys(kwargs).length > 0) {
+      executeArgs.push(kwargs);
+    }
+
+    return this.makeRequest<T>("/jsonrpc", {
+      method: "call",
+      params: {
+        service: "object",
+        method: "execute_kw",
+        args: executeArgs,
+      },
+    });
+  }
+
+  isAuthenticated(): boolean {
+    return this.uid > 0;
+  }
+}
+
+/**
+ * REST API protocol implementation for Odoo 19+.
+ * Uses /web/dataset/call_kw endpoint for model operations.
+ */
+class RestProtocol implements OdooProtocol {
+  private uid = 0;
+  private sessionId: string | null = null;
+  private axiosInstance: AxiosInstance;
+  
+  getUid(): number {
+    return this.uid;
+  }
+
+  constructor(
+    private baseUrl: string,
+    private db: string,
+    private username: string,
+    private password: string,
+  ) {
+    this.axiosInstance = axios.create({
+      baseURL: baseUrl,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      withCredentials: true, // Required for session cookies
+    });
+  }
+
+  async authenticate(): Promise<number> {
+    try {
+      const response = await this.axiosInstance.post<{ uid: number; session_id: string }>(
+        "/web/session/authenticate",
+        {
+          jsonrpc: "2.0",
+          params: {
+            db: this.db,
+            login: this.username,
+            password: this.password,
+          },
+        },
+      );
+
+      // Handle both JSON-RPC wrapper and direct response formats
+      const result = response.data as { uid?: number; session_id?: string; result?: { uid: number; session_id: string } };
+      
+      let uid: number;
+      let sessionId: string;
+      
+      if (result.result) {
+        uid = result.result.uid;
+        sessionId = result.result.session_id;
+      } else {
+        uid = result.uid ?? 0;
+        sessionId = result.session_id ?? "";
+      }
+
+      if (!uid || !sessionId) {
+        throw new Error("Authentication failed: invalid response");
+      }
+
+      this.uid = uid;
+      this.sessionId = sessionId;
+
+      // Store session cookie for subsequent requests
+      if (response.headers["set-cookie"]) {
+        // Axios with withCredentials will handle cookies automatically
+      }
+
+      return this.uid;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorMsg =
+          error.response?.data?.error?.message || error.message || "Authentication failed";
+        throw new Error(errorMsg);
+      }
+      throw error;
+    }
+  }
+
+  async call<T>(model: string, method: string, args: unknown[] = [], kwargs?: CallOptions): Promise<T> {
+    if (!this.uid || !this.sessionId) {
+      throw new Error("Not authenticated. Call authenticate() first.");
+    }
+
+    try {
+      const response = await this.axiosInstance.post<{ result?: T; error?: { message: string } }>(
+        "/web/dataset/call_kw",
+        {
+          jsonrpc: "2.0",
+          params: {
+            model,
+            method,
+            args,
+            kwargs: kwargs || {},
+            context: {
+              lang: kwargs?.context?.lang || "en_US",
+              ...kwargs?.context,
+            },
+          },
+        },
+      );
+
+      const data = response.data as { result?: T; error?: { message: string } };
+      
+      if (data.error) {
+        throw new Error(data.error.message || "API call failed");
+      }
+
+      if (typeof data.result === "undefined") {
+        throw new Error("No result in REST API response");
+      }
+
+      return data.result;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorMsg =
+          error.response?.data?.error?.message || error.message || "Network request failed";
+        throw new Error(errorMsg);
+      }
+      throw error;
+    }
+  }
+
+  isAuthenticated(): boolean {
+    return this.uid > 0 && this.sessionId !== null;
+  }
+}
+
+export default class OdooClient {
+  private protocol: OdooProtocol;
+  private db: string;
+  private username: string;
+  private password: string;
+  private registrarGroup: string;
+  private baseUrl: string;
+
+  constructor(config: OdooConfig) {
+    this.db = config.database;
+    this.username = config.username;
+    this.password = config.password;
+    this.registrarGroup = config.registrarGroup || "";
+    this.baseUrl = config.host;
+
+    // Select protocol based on config (default to jsonrpc for backward compatibility)
+    const apiType: OdooApiType = config.apiType || "jsonrpc";
+
+    if (apiType === "rest") {
+      this.protocol = new RestProtocol(this.baseUrl, this.db, this.username, this.password);
+    } else {
+      this.protocol = new JsonRpcProtocol(this.baseUrl, this.db, this.username, this.password);
     }
   }
 
@@ -113,12 +354,15 @@ export default class OdooClient {
     type ResGroupRecord = { res_id?: number };
 
     try {
-      const userInfo = await this.call<ResUsersGroupInfo[]>("res.users", "read", [[uid], ["groups_id"]]);
+      const userInfo = await this.protocol.call<ResUsersGroupInfo[]>("res.users", "read", [
+        [uid],
+        ["groups_id"],
+      ]);
       if (!Array.isArray(userInfo) || !userInfo[0]) {
         return false;
       }
 
-      const groups = await this.call<ResGroupRecord[]>("ir.model.data", "search_read", [
+      const groups = await this.protocol.call<ResGroupRecord[]>("ir.model.data", "search_read", [
         [
           ["model", "=", "res.groups"],
           ["name", "=", this.registrarGroup],
@@ -138,47 +382,22 @@ export default class OdooClient {
   }
 
   async login(): Promise<number> {
-    await this.authenticate();
+    const uid = await this.protocol.authenticate();
 
-    const hasRequiredRoles = await this.checkUserGroups(this.uid);
+    if (!uid) {
+      throw new Error("Authentication failed");
+    }
+
+    const hasRequiredRoles = await this.checkUserGroups(uid);
     if (!hasRequiredRoles) {
       throw new Error("Insufficient permissions");
     }
 
-    return this.uid;
-  }
-
-  private async authenticate(): Promise<void> {
-    const result = await this.makeRequest<number>("/jsonrpc", {
-      method: "call",
-      params: {
-        service: "common",
-        method: "authenticate",
-        args: [this.db, this.username, this.password, {}],
-      },
-    });
-
-    if (!result) {
-      throw new Error("Authentication failed");
-    }
-
-    this.uid = result;
+    return uid;
   }
 
   private async call<T>(model: string, method: string, args: unknown[] = [], kwargs?: CallOptions): Promise<T> {
-    const executeArgs: unknown[] = [this.db, this.uid, this.password, model, method, args];
-    if (kwargs && Object.keys(kwargs).length > 0) {
-      executeArgs.push(kwargs);
-    }
-
-    return this.makeRequest<T>("/jsonrpc", {
-      method: "call",
-      params: {
-        service: "object",
-        method: "execute_kw",
-        args: executeArgs,
-      },
-    });
+    return this.protocol.call<T>(model, method, args, kwargs);
   }
 
   async searchRead<T extends OdooBaseModel = OdooBaseModel>(
@@ -202,11 +421,11 @@ export default class OdooClient {
 
   async createHousehold(rootId: number, data: Partial<OpenSPPHousehold>): Promise<number> {
     const householdId = await this.call<number>("res.partner", "create", [data]);
-    
+
     if (householdId && rootId) {
       await this.addMembersToGroup(rootId, [{ individual: householdId }]);
     }
-    
+
     return householdId;
   }
 
@@ -257,7 +476,7 @@ export default class OdooClient {
   }
 
   isAuthenticated(): boolean {
-    return this.uid > 0;
+    return this.protocol.isAuthenticated();
   }
 
   /**
