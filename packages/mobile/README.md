@@ -94,7 +94,8 @@ This will build the app and open Xcode for further configuration and deployment.
 ## Features
 
 - Offline-first data collection
-- Form.io form rendering
+- Form.io form rendering with custom components
+- Biometric capture integration (Android, see [BIOMETRIC_CAPTURE.md](./BIOMETRIC_CAPTURE.md))
 - QR code scanning for configuration
 - Camera integration for photo capture
 - Geolocation support
