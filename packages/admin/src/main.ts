@@ -32,6 +32,10 @@ import router from './router'
 import { useAuthStore } from '@/stores/auth'
 import { initializeInstance } from './api'
 import { trimDirective } from './directives/trim'
+import { registerCustomComponents } from './formio'
+
+// Register custom Form.io components before the app starts
+registerCustomComponents()
 
 const app = createApp(App)
 const pinia = createPinia()
