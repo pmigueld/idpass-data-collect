@@ -20,6 +20,7 @@
 import '@mdi/font/css/materialdesignicons.css'
 import './assets/main.css'
 import 'vuetify/styles'
+import 'formiojs/dist/formio.full.min.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { createVuetify } from 'vuetify'
@@ -32,6 +33,7 @@ import router from './router'
 import { useAuthStore } from '@/stores/auth'
 import { initializeInstance } from './api'
 import { trimDirective } from './directives/trim'
+import { registerCustomComponents } from './formio'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -54,6 +56,9 @@ app.use(
   }),
 )
 app.use(router)
+
+// Register Form.io custom components
+registerCustomComponents()
 
 // Initialize auth store
 const authStore = useAuthStore()

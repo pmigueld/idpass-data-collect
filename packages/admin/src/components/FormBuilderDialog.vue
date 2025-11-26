@@ -8,12 +8,16 @@
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
-      <iframe
-        ref="builderIframe"
-        :src="iframeSrc"
-        frameborder="0"
-        class="form-builder-iframe"
-      ></iframe>
+      <v-card-text class="pa-0">
+        <div class="form-builder-container">
+          <FormBuilder
+            v-if="dialog"
+            :form="schema"
+            @change="handleSchemaChange"
+            :options="builderOptions"
+          />
+        </div>
+      </v-card-text>
       <v-card-actions>
         <v-btn variant="elevated" color="primary" @click="saveForm">Save Form</v-btn>
       </v-card-actions>
@@ -22,8 +26,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
-// import FormBuilder from '@/components/formio-builder.html'
+import { ref, watch } from 'vue'
+import { Builder as FormBuilder } from '@formio/vue'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -48,68 +52,28 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'submit'])
 
 const dialog = ref(false)
-const builderIframe = ref<HTMLIFrameElement | null>(null)
-const iframeSrc = ref('/formio-builder.html') // Path to builder HTML file
-const schema = ref(props.formio)
-let schemaUpdateResolver: ((value: object) => void) | null = null
+const schema = ref<Record<string, unknown>>(props.formio as Record<string, unknown>)
 
-// Message handler for iframe communication
-const messageHandler = (event: MessageEvent) => {
-  if (!isValidOrigin(event.origin)) return
-
-  switch (event.data.type) {
-    case 'formio-builder-schema':
-      handleSchemaUpdate(event.data.schema)
-      break
-
-    case 'formio-builder-ready':
-      initializeBuilder()
-      break
+const builderOptions = {
+  builder: {
+    // Builder configuration options
   }
 }
 
-const initializeBuilder = () => {
-  if (builderIframe.value && builderIframe.value.contentWindow) {
-    // Create a clean copy of the schema that's safe to clone
-    const safeSchema = JSON.parse(JSON.stringify(props.formio))
-
-    builderIframe.value.contentWindow.postMessage(
-      {
-        type: 'formio-initialize',
-        schema: safeSchema,
-      },
-      window.location.origin,
-    )
+// Handle schema changes from builder
+const handleSchemaChange = (event: { schema?: Record<string, unknown>; form?: Record<string, unknown> }) => {
+  // The Builder component may emit the schema in different formats
+  const updatedSchema = event.schema || event.form || schema.value
+  if (updatedSchema) {
+    schema.value = updatedSchema as Record<string, unknown>
   }
 }
-
-// Handle schema updates from builder
-const handleSchemaUpdate = (value: object) => {
-  schema.value = value
-  // If there's a pending promise waiting for schema update, resolve it
-  if (schemaUpdateResolver) {
-    schemaUpdateResolver(value)
-    schemaUpdateResolver = null
-  }
-}
-
-// Validate message origin
-const isValidOrigin = (origin: string) => {
-  return origin === window.location.origin
-}
-
-// Lifecycle hooks
-onMounted(() => {
-  window.addEventListener('message', messageHandler)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('message', messageHandler)
-})
 
 // Open/close dialog methods
 const openDialog = () => {
   dialog.value = true
+  // Reset schema when opening dialog
+  schema.value = JSON.parse(JSON.stringify(props.formio)) as Record<string, unknown>
 }
 
 const closeDialog = () => {
@@ -117,33 +81,8 @@ const closeDialog = () => {
   emit('update:modelValue', false)
 }
 
-const saveForm = async () => {
-  // Request the latest schema from the iframe before saving
-  if (builderIframe.value && builderIframe.value.contentWindow) {
-    // Create a promise that will be resolved when schema update is received
-    const schemaPromise = new Promise<object>((resolve) => {
-      schemaUpdateResolver = resolve
-    })
-
-    builderIframe.value.contentWindow.postMessage(
-      {
-        type: 'formio-request-schema',
-      },
-      window.location.origin,
-    )
-
-    // Wait for the schema update with a timeout fallback
-    const timeoutPromise = new Promise<object>((resolve) => {
-      setTimeout(() => resolve(schema.value), 200)
-    })
-
-    const latestSchema = await Promise.race([schemaPromise, timeoutPromise])
-    emit('submit', latestSchema)
-  } else {
-    // Fallback if iframe is not available
-    emit('submit', schema.value)
-  }
-
+const saveForm = () => {
+  emit('submit', schema.value)
   closeDialog()
 }
 
@@ -152,7 +91,22 @@ watch(
   () => props.modelValue,
   (val) => {
     dialog.value = val
+    if (val) {
+      // Reset schema when dialog opens
+      schema.value = JSON.parse(JSON.stringify(props.formio)) as Record<string, unknown>
+    }
   },
+)
+
+// Watch formio prop to update schema when it changes externally
+watch(
+  () => props.formio,
+  (newFormio) => {
+    if (!dialog.value) {
+      schema.value = JSON.parse(JSON.stringify(newFormio)) as Record<string, unknown>
+    }
+  },
+  { deep: true }
 )
 
 // Expose public methods
@@ -160,10 +114,9 @@ defineExpose({ openDialog, closeDialog })
 </script>
 
 <style scoped>
-.form-builder-iframe {
-  /* width: 100%; */
-  /* width: calc(100vw - 40px); */
-  height: calc(100vh); /* Subtract toolbar height */
-  border: none;
+.form-builder-container {
+  width: 100%;
+  height: calc(100vh - 120px);
+  overflow: auto;
 }
 </style>
