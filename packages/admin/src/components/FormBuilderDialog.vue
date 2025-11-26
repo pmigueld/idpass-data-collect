@@ -1,20 +1,24 @@
 <template>
   <v-dialog fullscreen v-model="dialog" transition="dialog-bottom-transition">
-    <v-card>
+    <v-card class="form-builder-dialog">
       <v-toolbar color="primary" dark>
-        <v-toolbar-title>Form Builder</v-toolbar-title>
+        <v-toolbar-title>{{ title || 'Form Builder' }}</v-toolbar-title>
         <v-spacer></v-spacer>
         <v-btn icon @click="closeDialog">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
-      <iframe
-        ref="builderIframe"
-        :src="iframeSrc"
-        frameborder="0"
-        class="form-builder-iframe"
-      ></iframe>
-      <v-card-actions>
+
+      <div class="form-builder-container">
+        <FormBuilder
+          v-model="schema"
+          @change="handleSchemaChange"
+        />
+      </div>
+
+      <v-card-actions class="form-builder-actions">
+        <v-spacer />
+        <v-btn variant="outlined" @click="closeDialog">Cancel</v-btn>
         <v-btn variant="elevated" color="primary" @click="saveForm">Save Form</v-btn>
       </v-card-actions>
     </v-card>
@@ -22,8 +26,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
-// import FormBuilder from '@/components/formio-builder.html'
+import { ref, watch, onMounted } from 'vue'
+import { FormBuilder, registerDefaultComponents, type FormSchema } from '@/form-builder'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -48,67 +52,47 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'submit'])
 
 const dialog = ref(false)
-const builderIframe = ref<HTMLIFrameElement | null>(null)
-const iframeSrc = ref('/formio-builder.html') // Path to builder HTML file
-const schema = ref(props.formio)
-let schemaUpdateResolver: ((value: object) => void) | null = null
+const schema = ref<FormSchema>({
+  display: 'form',
+  components: []
+})
 
-// Message handler for iframe communication
-const messageHandler = (event: MessageEvent) => {
-  if (!isValidOrigin(event.origin)) return
-
-  switch (event.data.type) {
-    case 'formio-builder-schema':
-      handleSchemaUpdate(event.data.schema)
-      break
-
-    case 'formio-builder-ready':
-      initializeBuilder()
-      break
-  }
-}
-
-const initializeBuilder = () => {
-  if (builderIframe.value && builderIframe.value.contentWindow) {
-    // Create a clean copy of the schema that's safe to clone
-    const safeSchema = JSON.parse(JSON.stringify(props.formio))
-
-    builderIframe.value.contentWindow.postMessage(
-      {
-        type: 'formio-initialize',
-        schema: safeSchema,
-      },
-      window.location.origin,
-    )
-  }
-}
-
-// Handle schema updates from builder
-const handleSchemaUpdate = (value: object) => {
-  schema.value = value
-  // If there's a pending promise waiting for schema update, resolve it
-  if (schemaUpdateResolver) {
-    schemaUpdateResolver(value)
-    schemaUpdateResolver = null
-  }
-}
-
-// Validate message origin
-const isValidOrigin = (origin: string) => {
-  return origin === window.location.origin
-}
-
-// Lifecycle hooks
+// Initialize the form builder with default components
 onMounted(() => {
-  window.addEventListener('message', messageHandler)
+  registerDefaultComponents()
 })
 
-onBeforeUnmount(() => {
-  window.removeEventListener('message', messageHandler)
-})
+// Convert Form.io schema to our internal format
+const convertFormioSchema = (formioSchema: any): FormSchema => {
+  if (!formioSchema) {
+    return { display: 'form', components: [] }
+  }
+
+  return {
+    display: formioSchema.display || 'form',
+    components: formioSchema.components || [],
+    settings: formioSchema.settings
+  }
+}
+
+// Convert our schema back to Form.io format for compatibility
+const convertToFormioSchema = (internalSchema: FormSchema): any => {
+  return {
+    display: internalSchema.display,
+    components: internalSchema.components,
+    settings: internalSchema.settings
+  }
+}
+
+// Handle schema changes from the Vue form builder
+const handleSchemaChange = (newSchema: FormSchema) => {
+  schema.value = newSchema
+}
 
 // Open/close dialog methods
 const openDialog = () => {
+  // Convert incoming Form.io schema to our format
+  schema.value = convertFormioSchema(props.formio)
   dialog.value = true
 }
 
@@ -117,33 +101,10 @@ const closeDialog = () => {
   emit('update:modelValue', false)
 }
 
-const saveForm = async () => {
-  // Request the latest schema from the iframe before saving
-  if (builderIframe.value && builderIframe.value.contentWindow) {
-    // Create a promise that will be resolved when schema update is received
-    const schemaPromise = new Promise<object>((resolve) => {
-      schemaUpdateResolver = resolve
-    })
-
-    builderIframe.value.contentWindow.postMessage(
-      {
-        type: 'formio-request-schema',
-      },
-      window.location.origin,
-    )
-
-    // Wait for the schema update with a timeout fallback
-    const timeoutPromise = new Promise<object>((resolve) => {
-      setTimeout(() => resolve(schema.value), 200)
-    })
-
-    const latestSchema = await Promise.race([schemaPromise, timeoutPromise])
-    emit('submit', latestSchema)
-  } else {
-    // Fallback if iframe is not available
-    emit('submit', schema.value)
-  }
-
+const saveForm = () => {
+  // Convert our schema back to Form.io format for compatibility
+  const formioSchema = convertToFormioSchema(schema.value)
+  emit('submit', formioSchema)
   closeDialog()
 }
 
@@ -151,8 +112,23 @@ const saveForm = async () => {
 watch(
   () => props.modelValue,
   (val) => {
-    dialog.value = val
+    if (val) {
+      openDialog()
+    } else {
+      dialog.value = val
+    }
   },
+)
+
+// Watch for external formio prop changes
+watch(
+  () => props.formio,
+  (newFormio) => {
+    if (dialog.value) {
+      schema.value = convertFormioSchema(newFormio)
+    }
+  },
+  { deep: true }
 )
 
 // Expose public methods
@@ -160,10 +136,19 @@ defineExpose({ openDialog, closeDialog })
 </script>
 
 <style scoped>
-.form-builder-iframe {
-  /* width: 100%; */
-  /* width: calc(100vw - 40px); */
-  height: calc(100vh); /* Subtract toolbar height */
-  border: none;
+.form-builder-dialog {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-builder-container {
+  flex: 1;
+  overflow: hidden;
+}
+
+.form-builder-actions {
+  border-top: 1px solid rgb(var(--v-theme-surface-variant));
+  background-color: rgb(var(--v-theme-surface));
 }
 </style>
