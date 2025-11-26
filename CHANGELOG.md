@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Field mapping UI with transformer support (text, date, ID, multi-select, boolean)
 - Better error handling and logging for external sync operations
 
+### Changed
+
+- Migrated Form.io builder from iframe-based implementation to native Vue component
+- Replaced CDN dependencies with bundled formiojs package
+- Improved Form.io and Vuetify CSS isolation to prevent style conflicts
+- Biometric capture component now uses TypeScript and proper Form.io component API
+
 ## [1.0.0] - 2025-09-24
 
 ### Added
