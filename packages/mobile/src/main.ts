@@ -34,6 +34,7 @@ import './style.css'
 import { useAuthManagerStore } from './store/authManager'
 
 import { createPinia } from 'pinia'
+import { registerFormioComponents } from './utils/formioComponents'
 
 async function initApp() {
   const isFeatureDynamicTurnedOn = import.meta.env.VITE_FEATURE_DYNAMIC
@@ -42,6 +43,9 @@ async function initApp() {
 
   const database = await createDatabase()
   const app = createApp(AppComponent).use(database).use(pinia).use(router)
+
+  // Register Form.io custom components
+  registerFormioComponents()
 
   // Set up Capacitor URL listener for OAuth callbacks
   const authManager = useAuthManagerStore()

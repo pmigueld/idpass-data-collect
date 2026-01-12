@@ -60,6 +60,7 @@ The built files will be in the `dist/` directory.
 - Upload JSON configuration files
 - Visual form builder using Form.io
 - Configure entity form dependencies
+- Custom components including Biometric Capture (see [BIOMETRIC_CAPTURE.md](./BIOMETRIC_CAPTURE.md))
 
 ### External Sync Configuration
 - Configure OpenSPP adapter with field mappings

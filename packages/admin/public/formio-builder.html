@@ -47,6 +47,98 @@
     <script>
       let builder = null
 
+      // Register Biometric Capture custom component
+      Formio.Components.components.biometricCapture = {
+        title: 'Biometric Capture',
+        group: 'custom',
+        icon: 'fa fa-fingerprint',
+        weight: 0,
+        schema: {
+          label: 'Biometric Capture',
+          type: 'biometricCapture',
+          key: 'biometricCapture',
+          input: true,
+          tableView: false,
+          defaultValue: null,
+          validate: {
+            required: false
+          },
+          customOptions: {
+            intentAction: 'io.idpass.bca.CAPTURE',
+            intentPackage: 'io.idpass.bca',
+            intentClass: 'io.idpass.bca.MainActivity',
+            captureType: 'fingerprint',
+            captureFormat: 'json'
+          }
+        },
+        editForm: function() {
+          return {
+            components: [
+              {
+                type: 'textfield',
+                key: 'label',
+                label: 'Label',
+                input: true
+              },
+              {
+                type: 'textfield',
+                key: 'key',
+                label: 'Property Name',
+                input: true,
+                validate: {
+                  required: true
+                }
+              },
+              {
+                type: 'textfield',
+                key: 'customOptions.intentAction',
+                label: 'Intent Action',
+                input: true,
+                defaultValue: 'io.idpass.bca.CAPTURE'
+              },
+              {
+                type: 'textfield',
+                key: 'customOptions.intentPackage',
+                label: 'Intent Package',
+                input: true,
+                defaultValue: 'io.idpass.bca'
+              },
+              {
+                type: 'textfield',
+                key: 'customOptions.intentClass',
+                label: 'Intent Class',
+                input: true,
+                defaultValue: 'io.idpass.bca.MainActivity'
+              },
+              {
+                type: 'select',
+                key: 'customOptions.captureType',
+                label: 'Capture Type',
+                input: true,
+                data: {
+                  values: [
+                    { label: 'Fingerprint', value: 'fingerprint' },
+                    { label: 'Face', value: 'face' },
+                    { label: 'Iris', value: 'iris' }
+                  ]
+                },
+                defaultValue: 'fingerprint'
+              },
+              {
+                type: 'checkbox',
+                key: 'validate.required',
+                label: 'Required',
+                input: true
+              }
+            ]
+          }
+        },
+        defaultSettings: {
+          input: true,
+          tableView: false
+        }
+      }
+
       Formio.builder(document.getElementById('builder'), {}, {}).then((instance) => {
         builder = instance
 
