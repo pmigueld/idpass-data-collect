@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { SystemRole } from "@idpass/data-collect-core";
-import { requireRole, requireAction, resolveRoleInTenant, canPerformActionInTenant } from "../middlewares/rbac";
+import { requireAction, resolveRoleInTenant, canPerformActionInTenant } from "../middlewares/rbac";
 import { AuthenticatedRequest, DecodedPayload } from "../middlewares/authentication";
 import { Role } from "../types";
 
@@ -47,103 +47,6 @@ function createAuthenticatedRequest(
 describe("RBAC Middleware", () => {
   beforeAll(() => {
     process.env.JWT_SECRET = JWT_SECRET;
-  });
-
-  describe("requireRole()", () => {
-    it("calls next() when user has sufficient role", () => {
-      const req = createAuthenticatedRequest([
-        { tenantId: "tenant-1", role: SystemRole.SUPERVISOR },
-      ]);
-      const res = mockResponse();
-      const next = mockNext();
-
-      requireRole(SystemRole.ENUMERATOR)(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-      expect(res.status).not.toHaveBeenCalled();
-    });
-
-    it("calls next() when user has exact required role", () => {
-      const req = createAuthenticatedRequest([
-        { tenantId: "tenant-1", role: SystemRole.ENUMERATOR },
-      ]);
-      const res = mockResponse();
-      const next = mockNext();
-
-      requireRole(SystemRole.ENUMERATOR)(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-    });
-
-    it("returns 403 when user has insufficient role", () => {
-      const req = createAuthenticatedRequest([
-        { tenantId: "tenant-1", role: SystemRole.VIEWER },
-      ]);
-      const res = mockResponse();
-      const next = mockNext();
-
-      requireRole(SystemRole.ENUMERATOR)(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith({
-        error: "Forbidden: Insufficient role",
-        required: SystemRole.ENUMERATOR,
-      });
-      expect(next).not.toHaveBeenCalled();
-    });
-
-    it("returns 401 when user is not authenticated", () => {
-      const req = mockRequest();
-      const res = mockResponse();
-      const next = mockNext();
-
-      requireRole(SystemRole.VIEWER)(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ error: "Authentication required" });
-      expect(next).not.toHaveBeenCalled();
-    });
-
-    it("allows admin users to bypass role checks", () => {
-      const req = mockRequest();
-      (req as AuthenticatedRequest).user = {
-        id: "admin-1",
-        email: "admin@example.com",
-        role: Role.ADMIN,
-        tenantIds: [],
-      };
-      const res = mockResponse();
-      const next = mockNext();
-
-      requireRole(SystemRole.SYSTEM_ADMIN)(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-    });
-
-    it("returns 403 when user has no role assignments", () => {
-      const req = createAuthenticatedRequest([]);
-      const res = mockResponse();
-      const next = mockNext();
-
-      requireRole(SystemRole.VIEWER)(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(403);
-      expect(next).not.toHaveBeenCalled();
-    });
-
-    it("uses the highest role from multiple assignments", () => {
-      const req = createAuthenticatedRequest([
-        { tenantId: "tenant-1", role: SystemRole.VIEWER },
-        { tenantId: "tenant-1", role: SystemRole.SUPERVISOR },
-        { tenantId: "tenant-2", role: SystemRole.ENUMERATOR },
-      ]);
-      const res = mockResponse();
-      const next = mockNext();
-
-      requireRole(SystemRole.SUPERVISOR)(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-    });
   });
 
   describe("requireAction()", () => {
