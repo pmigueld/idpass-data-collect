@@ -62,9 +62,22 @@ addRxPlugin(RxDBMigrationSchemaPlugin)
 // env var still tree-shake the dev paths out.
 const isDevelop = import.meta.env.VITE_DEVELOP === 'true'
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode'
-import { wrappedValidateAjvStorage } from 'rxdb/plugins/validate-ajv'
+import { getAjv, wrappedValidateAjvStorage } from 'rxdb/plugins/validate-ajv'
 if (isDevelop) {
   addRxPlugin(RxDBDevModePlugin)
+  // ajv-formats rejects http://localhost, which is the sync URL used in dev and e2e.
+  const ajv = getAjv()
+  ajv.addFormat('url', {
+    type: 'string',
+    validate: (value: string) => {
+      try {
+        const parsed = new URL(value)
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+      } catch {
+        return false
+      }
+    },
+  })
 }
 
 import { keySchema } from '@/schemas/keys.schema'
