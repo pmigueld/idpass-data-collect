@@ -1,0 +1,11 @@
+/*
+ * Bootstrap 5 for the web Form.io renderer.
+ *
+ * @formio/js 5 emits Bootstrap 5 markup and uses Bootstrap Icons (the font
+ * comes in with formio.full.min.css). These rules are layered so Vuetify's
+ * unlayered styles keep winning outside the form.
+ */
+
+/* Top-level `@import ... layer()` so Vite inlines Bootstrap. Nesting the
+ * import inside `@layer { }` drops it from the production bundle. */
+@import 'bootstrap/dist/css/bootstrap.min.css' layer(formio-bootstrap);

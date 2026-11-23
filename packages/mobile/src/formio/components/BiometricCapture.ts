@@ -17,20 +17,22 @@
  * under the License.
  */
 
-import Formio from 'formiojs';
+import { Formio } from '@formio/js';
 import BiometricCapturePlugin, { CaptureResult } from '../../plugins/BiometricCapture';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let Field: any;
 function getField() {
   if (!Field) {
-    // Formio.Components may not be available yet when the mobile production
-    // build uses inlineDynamicImports (class extends evaluates at module load).
-    // Fall back to a minimal base class so the module can load; the real base
-    // is wired up at registration time when Formio is ready.
-     
+    // `extends` runs when this module is evaluated. @formio/js registers its
+    // components during its own evaluation, which the static import above
+    // finishes first. An empty fallback would bake in a base class that never
+    // renders, so fail loudly if the v5 field component is missing.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Field = (Formio as any)?.Components?.components?.field ?? class {};
+    Field = (Formio as any)?.Components?.components?.field;
+    if (!Field) {
+      throw new Error('@formio/js field component is not available');
+    }
   }
   return Field;
 }

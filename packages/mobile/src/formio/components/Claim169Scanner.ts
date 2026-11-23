@@ -17,7 +17,7 @@
  * under the License.
  */
 
-import Formio from 'formiojs';
+import { Formio } from '@formio/js';
 import { Claim169ScannerService } from '../../services/Claim169ScannerService';
 import { registerIssuerKey, Claim169IdentityData, VerifiedIdentity, genderToString, imageFormatToMimeType } from '../../services/claim169Service';
 
@@ -25,9 +25,13 @@ import { registerIssuerKey, Claim169IdentityData, VerifiedIdentity, genderToStri
 let Field: any;
 function getField() {
   if (!Field) {
-     
+    // Same constraint as BiometricCapture: the v5 field base must exist when
+    // the class is evaluated, or the scanner registers against an empty class.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Field = (Formio as any)?.Components?.components?.field ?? class {};
+    Field = (Formio as any)?.Components?.components?.field;
+    if (!Field) {
+      throw new Error('@formio/js field component is not available');
+    }
   }
   return Field;
 }
@@ -74,7 +78,9 @@ export default class Claim169Scanner extends getField() {
     return {
       title: 'Claim-169 Scanner',
       group: 'advanced',
-      icon: 'qrcode',
+      // Bootstrap Icons name (`qr-code`). The rendered button below still
+      // uses Font Awesome 4's `fa-qrcode` glyph.
+      icon: 'qr-code',
       weight: 0,
       documentation: '#',
       schema: Claim169Scanner.schema()

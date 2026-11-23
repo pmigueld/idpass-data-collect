@@ -20,11 +20,11 @@
 /*
  * ID PASS theme for the Form.io builder.
  *
- * Form.io's bootstrap4 templates expect Bootstrap 4 classes. Instead of the
- * Phase A global CDN stylesheet (which leaked into the Vuetify dashboard and
- * broke its styles), Bootstrap is compiled here from SCSS with its variables
- * mapped to the ID PASS "Humanitarian Tech" design tokens, and every emitted
- * rule is scoped under:
+ * Form.io 5 renders with the Bootstrap 5 templates from `@formio/bootstrap`.
+ * Instead of a global Bootstrap stylesheet (which leaked into the Vuetify
+ * dashboard and broke its styles), Bootstrap 5 is compiled here from SCSS
+ * with its variables mapped to the ID PASS "Humanitarian Tech" design tokens,
+ * and every emitted rule is scoped under:
  *
  *   .formio-builder-host  — the FormioBuilder.vue mount element
  *   .formio-renderer-host — the FormioRenderer.vue (read-only preview) element
@@ -89,23 +89,39 @@ $component-active-bg: $primary;
 // Flat, token-driven look
 $enable-shadows: false;
 $enable-gradients: false;
+// The dashboard does not use Bootstrap's color modes. Skipping the dark
+// palette keeps those variables off the global `:root` block below.
+$enable-dark-mode: false;
 
 $card-cap-bg: #f8f9fa; // --secondary
 $nav-tabs-link-active-color: $primary;
 
 @import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+@import 'bootstrap/scss/maps';
 @import 'bootstrap/scss/mixins';
+@import 'bootstrap/scss/utilities';
+
+// Bootstrap 5's color system is CSS variables on `:root`. Nesting `_root.scss`
+// under the host compiles `:root` into a descendant selector that never
+// matches, so `var(--bs-*)` inside the builder would be unset. The names are
+// `--bs-*` and do not collide with Vuetify's `--v-*` tokens.
+@import 'bootstrap/scss/root';
 
 // ---------------------------------------------------------------------------
 // Bootstrap, scoped. `:is()` keeps a single compilation covering the in-app
 // host, the body-mounted edit dialogs, and nothing else.
 // `html`/`body` rules from reboot become dead descendants of the scope —
 // their job is done by the host base styles further down.
+// `custom-forms` was removed in Bootstrap 5; checks, switches, and input
+// groups live in `forms`. Utilities are generated from `utilities/api`
+// (the `utilities` import above only defines the Sass map).
 // ---------------------------------------------------------------------------
 :is(.formio-builder-host, .formio-renderer-host, .formio-dialog) {
-  @import 'bootstrap/scss/root';
   @import 'bootstrap/scss/reboot';
   @import 'bootstrap/scss/type';
+  @import 'bootstrap/scss/images';
+  @import 'bootstrap/scss/containers';
   @import 'bootstrap/scss/grid';
   @import 'bootstrap/scss/tables';
   @import 'bootstrap/scss/forms';
@@ -113,9 +129,8 @@ $nav-tabs-link-active-color: $primary;
   @import 'bootstrap/scss/transitions';
   @import 'bootstrap/scss/dropdown';
   @import 'bootstrap/scss/button-group';
-  @import 'bootstrap/scss/input-group';
-  @import 'bootstrap/scss/custom-forms';
   @import 'bootstrap/scss/nav';
+  @import 'bootstrap/scss/navbar';
   @import 'bootstrap/scss/card';
   @import 'bootstrap/scss/breadcrumb';
   @import 'bootstrap/scss/pagination';
@@ -124,8 +139,13 @@ $nav-tabs-link-active-color: $primary;
   @import 'bootstrap/scss/progress';
   @import 'bootstrap/scss/list-group';
   @import 'bootstrap/scss/close';
+  @import 'bootstrap/scss/toasts';
+  @import 'bootstrap/scss/modal';
+  @import 'bootstrap/scss/tooltip';
   @import 'bootstrap/scss/popover';
-  @import 'bootstrap/scss/utilities';
+  @import 'bootstrap/scss/spinners';
+  @import 'bootstrap/scss/helpers';
+  @import 'bootstrap/scss/utilities/api';
 
   // Replaces reboot's dead `body` rule.
   font-family: $font-family-sans-serif;
@@ -253,14 +273,13 @@ $nav-tabs-link-active-color: $primary;
       }
     }
 
-    // Chip container. NB: Form.io's markup tags the chip wrapper with the
-    // Bootstrap *5* utilities `d-grid gap-1`, but the builder compiles
-    // Bootstrap *4*, where neither exists — so the wrapper is a plain block
-    // with no grid and no gap. Inter-chip spacing therefore has to come from
-    // chip margin (see `.formcomponent` below), not container layout.
+    // Chip container. Form.io tags the wrapper with Bootstrap 5's `d-grid
+    // gap-1`. The palette rhythm is the chip margin below (--spacing-md),
+    // so that utility gap must not stack on top of it.
     .formcomponents {
       padding: var(--spacing-md);
       background-color: var(--neutral-50);
+      gap: 0 !important;
     }
 
     // The chip wrapper inside each group panel ships Bootstrap's `.p-2` (8px),

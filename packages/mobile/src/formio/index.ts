@@ -17,7 +17,7 @@
  * under the License.
  */
 
-import Formio from 'formiojs';
+import { Formio } from '@formio/js';
 // Static imports are safe because the components' getField() accessors
 // fall back to an empty base class when Formio.Components is not yet ready.
 // The mobile production build uses inlineDynamicImports which flattens

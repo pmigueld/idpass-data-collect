@@ -39,7 +39,7 @@ Built with Vue 3, Vuetify 3, TypeScript, XState v5, and Capacitor, the mobile ap
 | Platform Bridge | Capacitor 6 |
 | Biometrics | `@aparajita/capacitor-biometric-auth` |
 | Secure Storage | `@aparajita/capacitor-secure-storage` |
-| Forms | FormIO (`@formio/vue`, `formiojs`) |
+| Forms | FormIO (`@formio/vue` 6, `@formio/js` 5) |
 | Auth | JWT + OAuth (Auth0 / Keycloak) |
 
 ## Architecture

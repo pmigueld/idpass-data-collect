@@ -19,8 +19,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import 'bootstrap/dist/css/bootstrap.min.css'
-import 'formiojs/dist/formio.full.min.css'
+import '@formio/js/dist/formio.full.min.css'
+import '@/assets/formio-bootstrap.css'
 
 const props = defineProps<{
   schema: Record<string, unknown>
@@ -69,9 +69,6 @@ async function renderForm() {
   formError.value = null
 
   try {
-    // Dynamic import to avoid hard dependency
-    const { Formio } = await import('formiojs')
-
     // Clear previous form
     if (formInstance && typeof (formInstance as { destroy: () => void }).destroy === 'function') {
       ;(formInstance as { destroy: () => void }).destroy()
@@ -83,6 +80,7 @@ async function renderForm() {
     }
 
     const schemaWithButton = props.readOnly ? props.schema : ensureSubmitButton(props.schema)
+    const { Formio } = await import('@formio/js')
     const form = await Formio.createForm(formContainer.value, schemaWithButton, formOptions)
 
     if (props.submission) {

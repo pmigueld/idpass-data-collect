@@ -27,7 +27,7 @@ import '@mdi/font/css/materialdesignicons.min.css'
 // Deps for calendar picker in Formio
 import 'flatpickr-formio/dist/flatpickr.min.css'
 import 'flatpickr-formio'
-import 'formiojs/dist/formio.full.min.css'
+import '@formio/js/dist/formio.full.min.css'
 // Bootstrap is scoped to .formio-container only — not loaded globally
 import './assets/css/formio-scope.css'
 
