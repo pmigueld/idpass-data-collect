@@ -29,7 +29,7 @@ import "dotenv/config";
 
 import request from "supertest";
 import express from "express";
-import bodyParser from "body-parser";
+import { jsonBody } from "../middlewares/jsonBody";
 import jwt from "jsonwebtoken";
 import { createAppConfigRoutes } from "../routes/appConfigRoutes";
 import { AppConfig, AppConfigStore, AppInstanceStore } from "../types";
@@ -77,7 +77,7 @@ const SAMPLE_INJI = {
 
 function buildApp(store: jest.Mocked<AppConfigStore>, instanceStore: jest.Mocked<AppInstanceStore>) {
   const app = express();
-  app.use(bodyParser.json());
+  app.use(jsonBody());
   app.use("/api/apps", createAppConfigRoutes(store, instanceStore));
   return app;
 }

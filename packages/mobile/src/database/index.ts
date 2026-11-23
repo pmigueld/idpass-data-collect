@@ -62,8 +62,22 @@ addRxPlugin(RxDBMigrationSchemaPlugin)
 // env var still tree-shake the dev paths out.
 const isDevelop = import.meta.env.VITE_DEVELOP === 'true'
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode'
+import { getAjv, wrappedValidateAjvStorage } from 'rxdb/plugins/validate-ajv'
 if (isDevelop) {
   addRxPlugin(RxDBDevModePlugin)
+  // ajv-formats rejects http://localhost, which is the sync URL used in dev and e2e.
+  const ajv = getAjv()
+  ajv.addFormat('url', {
+    type: 'string',
+    validate: (value: string) => {
+      try {
+        const parsed = new URL(value)
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+      } catch {
+        return false
+      }
+    },
+  })
 }
 
 import { keySchema } from '@/schemas/keys.schema'
@@ -74,6 +88,11 @@ const KEY_DATABASE = Symbol('database')
 const encryptedDexieStorage = wrappedKeyEncryptionCryptoJsStorage({
   storage: getRxStorageDexie()
 })
+// Dev-mode refuses to open a database unless the top-level storage name
+// starts with "validate-". Production builds do not load the dev-mode plugin.
+const databaseStorage = isDevelop
+  ? wrappedValidateAjvStorage({ storage: encryptedDexieStorage })
+  : encryptedDexieStorage
 
 const DB_ENCRYPTION_KEY = 'rxdb_encryption_key'
 
@@ -126,7 +145,9 @@ async function clearStorageIfFirstInstall() {
     // it is persisted in secure storage and survives the clear below
     const password = await getOrCreateDbPassword()
     try {
-      await removeRxDatabase('idpass-data-collect', encryptedDexieStorage, password)
+      // rxdb 17 takes multiInstance before the encryption password.
+      // This database is opened with multiInstance: false.
+      await removeRxDatabase('idpass-data-collect', databaseStorage, false, password)
       localStorage.clear()
       sessionStorage.clear()
       await SecureStorageService.clear()
@@ -188,12 +209,28 @@ export function useFormResponseSync(): RxReplicationState<
 }
 
 let dbInstance = null
+let databasePromise: Promise<RxDatabase> | null = null
 
 export function getCurrentDatabase(): RxDatabase | null {
   return dbInstance
 }
 
-export async function getDatabase(): Promise<RxDatabase> {
+/**
+ * One shared startup. Module load (`getSyncServerByAppId`) and `main.ts`
+ * both call this, including at the same time. Production does not set
+ * `ignoreDuplicate`, so a second `createRxDatabase` would throw.
+ */
+export function getDatabase(): Promise<RxDatabase> {
+  if (!databasePromise) {
+    databasePromise = initializeDatabase().catch((error) => {
+      databasePromise = null
+      throw error
+    })
+  }
+  return databasePromise
+}
+
+async function initializeDatabase(): Promise<RxDatabase> {
   const PASSWORD = await getOrCreateDbPassword()
 
   await clearStorageIfFirstInstall()
@@ -201,11 +238,12 @@ export async function getDatabase(): Promise<RxDatabase> {
   try {
     dbInstance = await createRxDatabase({
       name: 'idpass-data-collect',
-      storage: encryptedDexieStorage,
+      storage: databaseStorage,
       eventReduce: true,
       multiInstance: false,
       password: PASSWORD,
-      ignoreDuplicate: true
+      // ignoreDuplicate is rejected outside dev-mode (DB9).
+      ...(isDevelop ? { ignoreDuplicate: true } : {})
     })
   } catch (error: unknown) {
     if (
@@ -220,11 +258,11 @@ export async function getDatabase(): Promise<RxDatabase> {
       const newPassword = await getOrCreateDbPassword()
       dbInstance = await createRxDatabase({
         name: 'idpass-data-collect',
-        storage: encryptedDexieStorage,
+        storage: databaseStorage,
         eventReduce: true,
         multiInstance: false,
         password: newPassword,
-        ignoreDuplicate: true
+        ...(isDevelop ? { ignoreDuplicate: true } : {})
       })
     } else {
       throw error
@@ -300,13 +338,14 @@ export async function getDatabase(): Promise<RxDatabase> {
       await handlePasswordMismatch()
       if (dbInstance) {
         try {
-          await dbInstance.destroy()
+          await dbInstance.close()
         } catch (destroyErr) {
           console.log('Error destroying database instance:', destroyErr)
         }
         dbInstance = null
       }
-      return await getDatabase()
+      databasePromise = null
+      return getDatabase()
     }
     throw error
   }

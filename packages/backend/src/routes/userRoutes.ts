@@ -28,6 +28,7 @@ import { asyncHandler } from "../middlewares/errorHandlers";
 import { SYNC_SCOPE_SCHEMA } from "../middlewares/syncScopeSchema";
 import { Role, UserStore } from "../types";
 import { PASSWORD_RULES } from "../utils/passwordRules";
+import { createIpRateLimiter, RATE_LIMITS } from "../middlewares/rateLimit";
 
 const RoleAssignmentSchema = z.object({
   tenantId: z.string(),
@@ -72,6 +73,10 @@ const DUMMY_PASSWORD_HASH = bcrypt.hashSync("invalid-account-placeholder", 10);
 
 export function createUserRoutes(userStore: UserStore): Router {
   const router = Router();
+  const refreshLimiter = createIpRateLimiter({
+    ...RATE_LIMITS.refresh,
+    message: "Too many refresh attempts, please try again later",
+  });
 
   // Login user
   router.post(
@@ -114,6 +119,7 @@ export function createUserRoutes(userStore: UserStore): Router {
   // Refresh token — issue a fresh access token from a valid access token or refresh token
   router.post(
     "/refresh",
+    refreshLimiter,
     asyncHandler(async (req, res) => {
       const { refreshToken: bodyRefreshToken } = req.body ?? {};
       const authHeader = req.headers.authorization;

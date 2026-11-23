@@ -31,6 +31,7 @@ import rateLimit from "express-rate-limit";
 import { SYNC_SCOPE_SCHEMA } from "../middlewares/syncScopeSchema";
 import { validateExternalSyncConfig } from "@idpass/data-collect-core";
 import { createLogger } from "../utils/logger";
+import { createIpRateLimiter, RATE_LIMITS } from "../middlewares/rateLimit";
 
 const log = createLogger("appConfigRoutes");
 const isTest = process.env.NODE_ENV === "test" || process.env.JEST_WORKER_ID !== undefined;
@@ -188,6 +189,7 @@ export function createAppConfigRoutes(appConfigStore: AppConfigStore, appInstanc
   // Admin middleware for mutation routes; falls back to authenticateJWT when
   // userStore is not provided (e.g. in tests that predate the admin guard).
   const adminAuth = userStore ? createAuthAdminMiddleware(userStore) : authenticateJWT;
+  const configWriteLimiter = createIpRateLimiter(RATE_LIMITS.appConfigWrite);
 
   const ensureValidConfigId = (id: unknown) => {
     if (typeof id !== "string" || !CONFIG_ID_PATTERN.test(id)) {
@@ -387,6 +389,7 @@ export function createAppConfigRoutes(appConfigStore: AppConfigStore, appInstanc
 
   router.post(
     "/",
+    configWriteLimiter,
     adminAuth,
     upload.single("config"),
     asyncHandler(async (req, res) => {
@@ -459,6 +462,7 @@ export function createAppConfigRoutes(appConfigStore: AppConfigStore, appInstanc
 
   router.put(
     "/:id",
+    configWriteLimiter,
     adminAuth,
     upload.single("config"),
     asyncHandler(async (req, res) => {

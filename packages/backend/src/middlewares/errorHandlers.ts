@@ -41,7 +41,9 @@ export const asyncHandler = (fn: AsyncRequestHandler) => {
 export const errorHandler = (err: CustomError, req: Request, res: Response, _next: NextFunction): void => {
   log.error({ err }, "Request error");
 
-  const statusCode = err.statusCode || 500;
+  const rawStatus = (err as { status?: unknown }).status;
+  const numericStatus = typeof rawStatus === "number" ? rawStatus : undefined;
+  const statusCode = err.statusCode || numericStatus || 500;
 
   const errorResponse = {
     success: false,

@@ -10,7 +10,7 @@ import "dotenv/config";
 import jwt from "jsonwebtoken";
 import request from "supertest";
 import express from "express";
-import bodyParser from "body-parser";
+import { jsonBody } from "../middlewares/jsonBody";
 import { createSelfServiceRouter } from "../routes/selfServiceRoutes";
 import { OtpStoreImpl } from "../stores/OtpStore";
 import { AppInstanceStore } from "../types";
@@ -91,7 +91,7 @@ describeIfPostgres("L15: Per-identifier OTP rate limiting", () => {
     } as unknown as jest.Mocked<AppInstanceStore>;
 
     app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/auth", createSelfServiceRouter(otpStore, mockAppInstanceStore));
   });
 

@@ -19,6 +19,7 @@
 
 import { EntityPair, EntityStorageAdapter, SearchCriteria } from "../interfaces/types";
 import { createLogger } from "../utils/logger";
+import { compileBoundedSearchRegex } from "./searchRegex";
 
 const log = createLogger("IndexedDbEntityStorageAdapter");
 
@@ -233,6 +234,16 @@ export class IndexedDbEntityStorageAdapter implements EntityStorageAdapter {
   async searchEntities(criteria: SearchCriteria): Promise<EntityPair[]> {
     if (!this.db) return [];
 
+    for (const criterion of criteria) {
+      const key = Object.keys(criterion)[0];
+      const value = criterion[key];
+      if (value && typeof value === "object" && Object.keys(value)[0] === "$regex") {
+        // Compile once up front so an over-long or invalid pattern rejects the
+        // search instead of failing inside the cursor callback.
+        compileBoundedSearchRegex(value.$regex);
+      }
+    }
+
     const transaction = this.db.transaction([this.storeName], "readonly");
     const objectStore = transaction.objectStore(this.storeName);
 
@@ -264,7 +275,7 @@ export class IndexedDbEntityStorageAdapter implements EntityStorageAdapter {
                 case "$eq":
                   return entityValue === operandValue;
                 case "$regex":
-                  return new RegExp(operandValue, "i").test(entityValue);
+                  return compileBoundedSearchRegex(operandValue).test(entityValue);
                 default:
                   return false;
               }

@@ -32,6 +32,15 @@ const OTP_EXPIRY_SECONDS = 300; // 5 minutes
 /** Length of the generated OTP code */
 const OTP_CODE_LENGTH = 6;
 
+/**
+ * Uniform 6-digit code in `[0, 1_000_000)`.
+ * Exported so the generator can be tested without a database.
+ */
+export function generateOtpCode(): string {
+  const number = crypto.randomInt(0, 10 ** OTP_CODE_LENGTH);
+  return number.toString().padStart(OTP_CODE_LENGTH, "0");
+}
+
 export interface OtpCode {
   id: string;
   identifier: string;
@@ -87,11 +96,11 @@ export class OtpStoreImpl implements OtpStore {
 
   /**
    * Generate a cryptographically random 6-digit OTP code.
+   * `randomInt` draws uniformly from the range, so the result is not biased
+   * by a modulo of a wider integer.
    */
   private generateOtpCode(): string {
-    const bytes = crypto.randomBytes(4);
-    const number = bytes.readUInt32BE(0) % 1_000_000;
-    return number.toString().padStart(OTP_CODE_LENGTH, "0");
+    return generateOtpCode();
   }
 
   /**

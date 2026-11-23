@@ -17,7 +17,7 @@
  * under the License.
  */
 
-import bodyParser from "body-parser";
+import { jsonBody } from "../jsonBody";
 import express from "express";
 import request from "supertest";
 import { createScopeContextMiddleware } from "../scopeContext";
@@ -59,7 +59,7 @@ function appWithBodyScope(
   defaultConfigId?: string,
 ) {
   const app = express();
-  app.use(bodyParser.json());
+  app.use(jsonBody());
   app.use((req, _res, next) => {
     const userEmail = req.header("X-Test-User") || "alice@example.com";
     (req as unknown as { user?: { id: string; email: string; roleAssignments?: RoleAssignment[] } }).user = {

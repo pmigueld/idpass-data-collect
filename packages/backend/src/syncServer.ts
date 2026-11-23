@@ -18,7 +18,7 @@
  */
 
 import bcrypt from "bcrypt";
-import bodyParser from "body-parser";
+import { jsonBody } from "./middlewares/jsonBody";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
@@ -29,6 +29,7 @@ import fs from "fs/promises";
 import YAML from "yamljs";
 import { Pool } from "pg";
 import { errorHandler, notFoundHandler, setupUncaughtHandlers } from "./middlewares/errorHandlers";
+import { createIpRateLimiter, RATE_LIMITS } from "./middlewares/rateLimit";
 import { createAppConfigRoutes } from "./routes/appConfigRoutes";
 import { createConflictRouter } from "./routes/conflictRoutes";
 import { createEntitiesRouter } from "./routes/entitiesRoute";
@@ -171,7 +172,11 @@ export async function run(config: SyncServerConfig): Promise<SyncServerInstance>
     logger,
     genReqId: () => crypto.randomUUID(),
   }));
-  app.use(bodyParser.json({ limit: "1mb" }));
+  app.use(jsonBody({ limit: "1mb" }));
+  // Static serving below returns files that already exist under public/artifacts.
+  // The limiter has to run first or those downloads never reach the routes.
+  const artifactLimiter = createIpRateLimiter(RATE_LIMITS.artifacts);
+  app.use("/artifacts", artifactLimiter);
   app.use(
     express.static(path.join(__dirname, "public"), {
       setHeaders: (res, filePath) => {
@@ -208,7 +213,8 @@ export async function run(config: SyncServerConfig): Promise<SyncServerInstance>
     await telemetryStore.initialize();
   }
 
-  app.get("/health", async (_req, res) => {
+  const healthLimiter = createIpRateLimiter(RATE_LIMITS.health);
+  app.get("/health", healthLimiter, async (_req, res) => {
     const timestamp = new Date().toISOString();
     try {
       await healthCheckPool.query("SELECT 1");

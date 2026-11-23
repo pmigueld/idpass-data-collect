@@ -21,7 +21,7 @@ import "dotenv/config";
 
 import request from "supertest";
 import express from "express";
-import bodyParser from "body-parser";
+import { jsonBody } from "../middlewares/jsonBody";
 import jwt from "jsonwebtoken";
 import { createSelfServiceRouter } from "../routes/selfServiceRoutes";
 import { createAppConfigRoutes } from "../routes/appConfigRoutes";
@@ -159,7 +159,7 @@ describe("GET /api/apps/:id/public", () => {
     mockAppInstanceStore = createMockAppInstanceStore();
 
     app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/apps", createAppConfigRoutes(mockAppConfigStore, mockAppInstanceStore));
     app.use(errorHandler);
   });
@@ -256,7 +256,7 @@ describeIfPostgres("POST /api/auth/oidc/exchange", () => {
     mockAppInstanceStore = createMockAppInstanceStore();
 
     app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/auth", createSelfServiceRouter(otpStore, mockAppInstanceStore));
     app.use(errorHandler);
   });
@@ -436,7 +436,7 @@ describe("POST /api/auth/oidc/exchange (pre-verification, without PostgreSQL)", 
     };
 
     app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/auth", createSelfServiceRouter(mockOtpStore as never, mockAppInstanceStore));
     app.use(errorHandler);
   });
@@ -492,7 +492,7 @@ describe("GET /api/auth/self-service/entity (without PostgreSQL)", () => {
     };
 
     app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/auth", createSelfServiceRouter(mockOtpStore as never, mockAppInstanceStore));
     app.use(errorHandler);
   });
@@ -608,7 +608,7 @@ describe("POST /api/auth/self-service/submit (without PostgreSQL)", () => {
     };
 
     app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/auth", createSelfServiceRouter(mockOtpStore as never, mockAppInstanceStore));
     app.use(errorHandler);
   });
@@ -796,7 +796,7 @@ describe("POST /api/auth/self-service/submit — entity form name routing", () =
     };
 
     app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/auth", createSelfServiceRouter(mockOtpStore as never, mockAppInstanceStore));
     app.use(errorHandler);
   });
@@ -922,7 +922,7 @@ describe("GET /api/auth/self-service/submissions (without PostgreSQL)", () => {
     };
 
     app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/auth", createSelfServiceRouter(mockOtpStore as never, mockAppInstanceStore));
     app.use(errorHandler);
   });
@@ -1044,7 +1044,7 @@ describe("Scope hardening", () => {
     };
 
     app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/auth", createSelfServiceRouter(mockOtpStore as never, mockAppInstanceStore));
     app.use(errorHandler);
   });
@@ -1222,7 +1222,7 @@ describe("POST /api/auth/self-service/submit — member-GUID injection guard", (
     };
 
     app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/auth", createSelfServiceRouter(mockOtpStore as never, mockAppInstanceStore));
     app.use(errorHandler);
   });

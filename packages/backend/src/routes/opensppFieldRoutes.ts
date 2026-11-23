@@ -28,8 +28,20 @@ import fs from "fs/promises";
 import net from "net";
 import dns from "dns/promises";
 import { OdooClient } from "@idpass/adapter-openspp";
+import { createIpRateLimiter, RATE_LIMITS } from "../middlewares/rateLimit";
 
 const log = createLogger("openspp-fields");
+
+/**
+ * Drop trailing `/` characters with a single forward scan.
+ */
+export function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) {
+    end -= 1;
+  }
+  return value.slice(0, end);
+}
 
 /**
  * Loopback / private / link-local / reserved ranges that an operator-supplied
@@ -280,6 +292,7 @@ function extractRelationOptions(
 
 export function createOpenSppFieldRoutes(): Router {
   const router = Router();
+  const openSppLimiter = createIpRateLimiter(RATE_LIMITS.openSpp);
 
   // Configure multer for JSON file uploads
   const uploadDir = path.resolve(process.cwd(), "uploads");
@@ -306,6 +319,7 @@ export function createOpenSppFieldRoutes(): Router {
    */
   router.post(
     "/parse-file",
+    openSppLimiter,
     authenticateJWT,
     (req, res, next) => {
       upload.single("payload")(req, res, (err) => {
@@ -430,6 +444,7 @@ export function createOpenSppFieldRoutes(): Router {
    */
   router.post(
     "/fetch",
+    openSppLimiter,
     authenticateJWT,
     asyncHandler(async (req, res) => {
       const { url, database, username, password, model = "res.partner", fields, attributes } = req.body;
@@ -491,7 +506,7 @@ export function createOpenSppFieldRoutes(): Router {
         throw new AppError("URLs targeting private or internal networks are not allowed", 400);
       }
 
-      const tokenUrl = `${baseUrl.replace(/\/+$/, "")}/api/v2/spp/oauth/token`;
+      const tokenUrl = `${trimTrailingSlashes(baseUrl)}/api/v2/spp/oauth/token`;
 
       try {
         const response = await fetch(tokenUrl, {
@@ -550,7 +565,7 @@ export function createOpenSppFieldRoutes(): Router {
         throw new AppError("URLs targeting private or internal networks are not allowed", 400);
       }
 
-      const base = baseUrl.replace(/\/+$/, "");
+      const base = trimTrailingSlashes(baseUrl);
       const tokenUrl = `${base}/api/v2/spp/oauth/token`;
 
       // Authenticate

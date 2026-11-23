@@ -28,6 +28,7 @@ import {
 import { asyncHandler } from "../middlewares/errorHandlers";
 import { AppInstanceStore } from "../types";
 import { createLogger } from "../utils/logger";
+import { createIpRateLimiter, RATE_LIMITS } from "../middlewares/rateLimit";
 
 const log = createLogger("conflictRoutes");
 
@@ -61,9 +62,11 @@ const ResolvePayloadSchema = z
  */
 export function createConflictRouter(appInstanceStore: AppInstanceStore): Router {
   const router = Router();
+  const conflictLimiter = createIpRateLimiter(RATE_LIMITS.conflicts);
 
   router.get(
     "/",
+    conflictLimiter,
     createDynamicAuthMiddleware(appInstanceStore),
     validateTenantAccess,
     asyncHandler(async (req, res) => {
@@ -80,6 +83,7 @@ export function createConflictRouter(appInstanceStore: AppInstanceStore): Router
 
   router.get(
     "/:guid",
+    conflictLimiter,
     createDynamicAuthMiddleware(appInstanceStore),
     validateTenantAccess,
     asyncHandler(async (req, res) => {
@@ -100,6 +104,7 @@ export function createConflictRouter(appInstanceStore: AppInstanceStore): Router
 
   router.post(
     "/:guid/resolve",
+    conflictLimiter,
     createDynamicAuthMiddleware(appInstanceStore),
     validateTenantAccess,
     asyncHandler(async (req, res) => {

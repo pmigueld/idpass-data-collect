@@ -2,7 +2,7 @@ import "dotenv/config";
 
 import request from "supertest";
 import express from "express";
-import bodyParser from "body-parser";
+import { jsonBody } from "../middlewares/jsonBody";
 import jwt from "jsonwebtoken";
 import { createSelfServiceRouter } from "../routes/selfServiceRoutes";
 import { AppInstanceStore } from "../types";
@@ -40,7 +40,7 @@ function makeOtpStore() {
 
 function buildApp(getAppInstance: jest.Mock) {
   const app = express();
-  app.use(bodyParser.json());
+  app.use(jsonBody());
   app.use("/api/auth", createSelfServiceRouter(makeOtpStore(), makeAppInstanceStore(getAppInstance)));
   return app;
 }

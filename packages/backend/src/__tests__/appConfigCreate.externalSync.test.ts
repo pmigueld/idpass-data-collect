@@ -39,7 +39,7 @@ import "dotenv/config";
 
 import request from "supertest";
 import express from "express";
-import bodyParser from "body-parser";
+import { jsonBody } from "../middlewares/jsonBody";
 import jwt from "jsonwebtoken";
 import { adapterRegistry } from "@idpass/data-collect-core";
 import { MockRegistrySyncAdapter } from "@idpass/adapter-mock";
@@ -66,7 +66,7 @@ const ADMIN_TOKEN = jwt.sign({ id: 1, username: "admin", role: "ADMIN" }, JWT_SE
 
 function buildApp(store: jest.Mocked<AppConfigStore>, instanceStore: jest.Mocked<AppInstanceStore>) {
   const app = express();
-  app.use(bodyParser.json());
+  app.use(jsonBody());
   app.use("/api/apps", createAppConfigRoutes(store, instanceStore));
   app.use(errorHandler);
   return app;

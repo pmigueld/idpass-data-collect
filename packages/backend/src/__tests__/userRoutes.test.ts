@@ -30,7 +30,7 @@ import "dotenv/config";
 
 import request from "supertest";
 import express from "express";
-import bodyParser from "body-parser";
+import { jsonBody } from "../middlewares/jsonBody";
 import jwt from "jsonwebtoken";
 import { createUserRoutes } from "../routes/userRoutes";
 import { Role, UserStore, UserWithPasswordHash } from "../types";
@@ -73,7 +73,7 @@ function buildUserStore(): jest.Mocked<UserStore> {
 
 function buildApp(userStore: UserStore): express.Express {
   const app = express();
-  app.use(bodyParser.json());
+  app.use(jsonBody());
   app.use("/api/users", createUserRoutes(userStore));
   return app;
 }

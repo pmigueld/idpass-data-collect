@@ -10,7 +10,7 @@ import "dotenv/config";
 
 import request from "supertest";
 import express from "express";
-import bodyParser from "body-parser";
+import { jsonBody } from "../middlewares/jsonBody";
 import jwt from "jsonwebtoken";
 import { createSelfServiceRouter, requireSelfServiceScope } from "../routes/selfServiceRoutes";
 import { createAppConfigRoutes } from "../routes/appConfigRoutes";
@@ -31,7 +31,7 @@ describe("Phase 1a: requireSelfServiceScope entityGuid enforcement", () => {
 
   it("should allow tokens without entityGuid through middleware (handler-level enforcement)", async () => {
     const app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
 
     // Mount a test route behind the middleware
     app.get("/test", requireSelfServiceScope, (req, res) => {
@@ -54,7 +54,7 @@ describe("Phase 1a: requireSelfServiceScope entityGuid enforcement", () => {
 
   it("should allow tokens with entityGuid", async () => {
     const app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
 
     app.get("/test", requireSelfServiceScope, (req, res) => {
       res.json({ ok: true });
@@ -74,7 +74,7 @@ describe("Phase 1a: requireSelfServiceScope entityGuid enforcement", () => {
 
   it("should still reject tokens with wrong scope", async () => {
     const app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
 
     app.get("/test", requireSelfServiceScope, (req, res) => {
       res.json({ ok: true });
@@ -122,7 +122,7 @@ describeIfPostgres("Phase 1b: Uniform error messages for brute-force protection"
     } as jest.Mocked<AppInstanceStore>;
 
     app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/auth", createSelfServiceRouter(otpStore, mockAppInstanceStore));
   });
 
@@ -261,7 +261,7 @@ describe("Phase 1b: Public config endpoint rate limiter", () => {
     } as jest.Mocked<AppInstanceStore>;
 
     const app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/apps", createAppConfigRoutes(mockAppConfigStore, mockAppInstanceStore));
 
     // A single request should succeed
@@ -307,7 +307,7 @@ describe("Phase 1b: Languages exposed in public config", () => {
     } as jest.Mocked<AppInstanceStore>;
 
     app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/apps", createAppConfigRoutes(mockAppConfigStore, mockAppInstanceStore));
   });
 
@@ -392,7 +392,7 @@ describeIfPostgres("Phase 1c: Dynamic availableForms from tenant config", () => 
     } as jest.Mocked<AppInstanceStore>;
 
     app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/auth", createSelfServiceRouter(otpStore, mockAppInstanceStore));
   });
 
