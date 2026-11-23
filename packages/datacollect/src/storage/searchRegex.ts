@@ -23,13 +23,23 @@ export const MAX_SEARCH_REGEX_LENGTH = 100;
 // A quantifier immediately after a group close, e.g. `(a+)+`.
 const NESTED_QUANTIFIER_PATTERN = /[+*}?]\s*\)[\s]*[+*{?]/;
 
+// Flags from a RegExp operand that stay meaningful on a one-shot search.
+// `g` and `y` are dropped because they make `RegExp.test` stateful.
+const PRESERVED_REGEXP_FLAGS = new Set(["m", "s", "u", "d", "v"]);
+
+function patternSource(operand: unknown): string {
+  if (operand instanceof RegExp) return operand.source;
+  return typeof operand === "string" ? operand : String(operand);
+}
+
 /**
  * Accept a search regex operand only when it stays within the length bound
- * and does not contain a nested quantifier. Both entity storage adapters
- * use the returned string.
+ * and does not contain a nested quantifier. A RegExp operand contributes its
+ * source, not `String(regexp)` (which is `"/source/flags"`). Both entity
+ * storage adapters use the returned string.
  */
 export function assertBoundedSearchRegex(operand: unknown): string {
-  const pattern = typeof operand === "string" ? operand : String(operand);
+  const pattern = patternSource(operand);
   if (pattern.length > MAX_SEARCH_REGEX_LENGTH) {
     throw new Error(`Regex pattern exceeds maximum length of ${MAX_SEARCH_REGEX_LENGTH} characters`);
   }
@@ -37,4 +47,21 @@ export function assertBoundedSearchRegex(operand: unknown): string {
     throw new Error("Regex pattern contains nested quantifiers which may cause catastrophic backtracking");
   }
   return pattern;
+}
+
+/**
+ * Compile a search operand. The match is always case-insensitive. Other
+ * non-global flags on a RegExp operand are kept.
+ */
+export function compileBoundedSearchRegex(operand: unknown): RegExp {
+  const source = assertBoundedSearchRegex(operand);
+  let flags = "i";
+  if (operand instanceof RegExp) {
+    for (const flag of operand.flags) {
+      if (PRESERVED_REGEXP_FLAGS.has(flag) && !flags.includes(flag)) {
+        flags += flag;
+      }
+    }
+  }
+  return new RegExp(source, flags);
 }

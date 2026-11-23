@@ -290,6 +290,22 @@ describe("IndexedDbEntityStorageAdapter", () => {
     expect(defaultSavedEntity).toBeNull();
   });
 
+  test("searchEntities matches a RegExp operand by its source", async () => {
+    const entity: EntityDoc = {
+      id: "1",
+      guid: "1",
+      type: EntityType.Individual,
+      data: { name: "John Doe" },
+      version: 1,
+      lastUpdated: "2023-05-01T10:00:00.000Z",
+    };
+    await adapter.saveEntity({ guid: "1", initial: entity, modified: entity });
+
+    const result = await adapter.searchEntities([{ name: { $regex: /john/i } }]);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.modified.data.name).toBe("John Doe");
+  });
+
   test("searchEntities rejects an over-long $regex operand", async () => {
     const pattern = "a".repeat(MAX_SEARCH_REGEX_LENGTH + 1);
     await expect(adapter.searchEntities([{ name: { $regex: pattern } }])).rejects.toThrow(/maximum length/);

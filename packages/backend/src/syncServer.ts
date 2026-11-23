@@ -173,6 +173,10 @@ export async function run(config: SyncServerConfig): Promise<SyncServerInstance>
     genReqId: () => crypto.randomUUID(),
   }));
   app.use(bodyParser.json({ limit: "1mb" }));
+  // Static serving below returns files that already exist under public/artifacts.
+  // The limiter has to run first or those downloads never reach the routes.
+  const artifactLimiter = createIpRateLimiter(RATE_LIMITS.artifacts);
+  app.use("/artifacts", artifactLimiter);
   app.use(
     express.static(path.join(__dirname, "public"), {
       setHeaders: (res, filePath) => {
@@ -235,8 +239,7 @@ export async function run(config: SyncServerConfig): Promise<SyncServerInstance>
     app.use("/api/admin/devices", createAdminDevicesRouter(userStore, telemetryStore));
   }
 
-  const artifactLimiter = createIpRateLimiter(RATE_LIMITS.artifacts);
-  app.get("/artifacts/:artifactId.json", artifactLimiter, async (req, res, next) => {
+  app.get("/artifacts/:artifactId.json", async (req, res, next) => {
     try {
       const { artifactId } = req.params;
       const appConfig = await appConfigStore.getConfigByArtifactId(artifactId);
@@ -255,7 +258,7 @@ export async function run(config: SyncServerConfig): Promise<SyncServerInstance>
     }
   });
 
-  app.get("/artifacts/:artifactId.png", artifactLimiter, async (req, res, next) => {
+  app.get("/artifacts/:artifactId.png", async (req, res, next) => {
     try {
       const { artifactId } = req.params;
       const appConfig = await appConfigStore.getConfigByArtifactId(artifactId);

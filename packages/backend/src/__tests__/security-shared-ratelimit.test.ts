@@ -3,6 +3,8 @@
  */
 import "dotenv/config";
 
+import fs from "fs/promises";
+import path from "path";
 import request from "supertest";
 import express from "express";
 import bodyParser from "body-parser";
@@ -157,9 +159,32 @@ describeIfPostgres("public route rate limits (live)", () => {
     await expectEventuallyLimited("/health", RATE_LIMITS.health.limit);
   });
 
-  it("limits GET /artifacts/:id.json and shares the bucket with the png route", async () => {
-    await expectEventuallyLimited("/artifacts/missing.json", RATE_LIMITS.artifacts.limit);
-    const png = await request(app.httpServer).get("/artifacts/missing.png");
-    expect(png.status).toBe(429);
+  it("limits an artifact file that already exists on disk", async () => {
+    const artifactsDir = path.join(__dirname, "../public/artifacts");
+    const filePath = path.join(artifactsDir, "rate-limit-existing.json");
+    await fs.mkdir(artifactsDir, { recursive: true });
+    await fs.writeFile(filePath, JSON.stringify({ ok: true }));
+    try {
+      let sawFile = false;
+      let blocked = false;
+      for (let i = 0; i < RATE_LIMITS.artifacts.limit + 1; i++) {
+        const response = await request(app.httpServer).get("/artifacts/rate-limit-existing.json");
+        if (response.status === 200) {
+          sawFile = true;
+          expect(response.body).toEqual({ ok: true });
+        }
+        if (response.status === 429) {
+          blocked = true;
+          expect(response.body.error).toBe("Too many requests, please try again later");
+          break;
+        }
+      }
+      expect(sawFile).toBe(true);
+      expect(blocked).toBe(true);
+      const png = await request(app.httpServer).get("/artifacts/missing.png");
+      expect(png.status).toBe(429);
+    } finally {
+      await fs.unlink(filePath).catch(() => {});
+    }
   });
 });

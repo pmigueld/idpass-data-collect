@@ -19,7 +19,7 @@
 
 import { EntityPair, EntityStorageAdapter, SearchCriteria } from "../interfaces/types";
 import { createLogger } from "../utils/logger";
-import { assertBoundedSearchRegex } from "./searchRegex";
+import { compileBoundedSearchRegex } from "./searchRegex";
 
 const log = createLogger("IndexedDbEntityStorageAdapter");
 
@@ -240,7 +240,7 @@ export class IndexedDbEntityStorageAdapter implements EntityStorageAdapter {
       if (value && typeof value === "object" && Object.keys(value)[0] === "$regex") {
         // Compile once up front so an over-long or invalid pattern rejects the
         // search instead of failing inside the cursor callback.
-        new RegExp(assertBoundedSearchRegex(value.$regex), "i");
+        compileBoundedSearchRegex(value.$regex);
       }
     }
 
@@ -275,7 +275,7 @@ export class IndexedDbEntityStorageAdapter implements EntityStorageAdapter {
                 case "$eq":
                   return entityValue === operandValue;
                 case "$regex":
-                  return new RegExp(assertBoundedSearchRegex(operandValue), "i").test(entityValue);
+                  return compileBoundedSearchRegex(operandValue).test(entityValue);
                 default:
                   return false;
               }
