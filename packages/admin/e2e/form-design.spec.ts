@@ -17,29 +17,6 @@
  * under the License.
  */
 
-/**
- * Playwright e2e for the Form.io builder iframe -> Vue migration.
- *
- * Goal: prove the form-design surface
- *   (a) no longer ships the legacy iframe pointing at `/formio-builder.html`,
- *   (b) renders the new <FormioBuilder>'s `.formio-builder-host` mount node,
- *   (c) actually loads @formio/js — verified by the presence of the Form.io
- *       builder palette wrapper (`.formcomponents`).
- *
- * Surface under test: the wizard's `FormDesigner.vue` reached via
- * `/programs/wizard/forms/<i>/design`. The legacy `ConfigCreateView` ->
- * `FormBuilderDialog` path also embeds `FormioBuilder`, but the router now
- * redirects `/create` -> `wizard-general` (see `router/index.ts`), so the
- * wizard is the live consumer of the migrated component and the right place
- * to smoke-test.
- *
- * Auth + draft: all backend calls are mocked via `page.route`. The wizard's
- * `FormsStep` and `FormDesigner` make no API calls of their own — the draft
- * is initialised client-side in the router's `beforeEach` guard. Only the
- * auth token (planted via `addInitScript`) and the `/api/users/refresh`
- * fallback are required.
- */
-
 import { test, expect, type Page } from '@playwright/test'
 
 const TENANT_ID = 'demo'
