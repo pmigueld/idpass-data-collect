@@ -545,7 +545,7 @@ interface CustomSyncConfig extends ExternalSyncConfig {
 
 ## Related Components
 
-- **ConfigCreateView.vue**: Admin UI for configuring external sync
+- **Wizard** (`packages/admin/src/views/wizard/`): Admin UI for configuring external sync
 - **FieldMappingDialog.vue**: Visual interface for field mapping configuration
 - **MockRegistrySyncAdapter**: V2 OAuth2 HTTP client for the reference mock registry (examples/mock-server)
 - **OpenFnSyncAdapter**: OpenFn platform integration

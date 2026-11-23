@@ -27,11 +27,8 @@
  *       builder palette wrapper (`.formcomponents`).
  *
  * Surface under test: the wizard's `FormDesigner.vue` reached via
- * `/programs/wizard/forms/<i>/design`. The legacy `ConfigCreateView` ->
- * `FormBuilderDialog` path also embeds `FormioBuilder`, but the router now
- * redirects `/create` -> `wizard-general` (see `router/index.ts`), so the
- * wizard is the live consumer of the migrated component and the right place
- * to smoke-test.
+ * `/programs/wizard/forms/<i>/design`. The router sends `/create` to
+ * `wizard-general`, so the wizard is the live consumer of `FormioBuilder`.
  *
  * Auth + draft: all backend calls are mocked via `page.route`. The wizard's
  * `FormsStep` and `FormDesigner` make no API calls of their own — the draft
