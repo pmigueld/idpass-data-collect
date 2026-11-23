@@ -363,21 +363,6 @@ Full-screen overlay rendered by the `lockMachine` when the app is locked. Uses V
 #### AppSnackbar.vue
 Global error and notification overlay driven by the `useSnackbar` composable. Surfaces errors from auth failures, sync issues, and form validation via `v-snackbar`.
 
-#### SaveDialog
-Modal dialog for saving data using Vuetify 3's `v-dialog`:
-```vue
-<template>
-  <v-dialog v-model="open">
-    <v-card>
-      <v-card-title>{{ title }}</v-card-title>
-      <v-card-actions>
-        <v-btn @click="onSave">Save</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-</template>
-```
-
 ### Environment Variables
 
 ```env
