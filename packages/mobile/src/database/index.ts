@@ -209,12 +209,28 @@ export function useFormResponseSync(): RxReplicationState<
 }
 
 let dbInstance = null
+let databasePromise: Promise<RxDatabase> | null = null
 
 export function getCurrentDatabase(): RxDatabase | null {
   return dbInstance
 }
 
-export async function getDatabase(): Promise<RxDatabase> {
+/**
+ * One shared startup. Module load (`getSyncServerByAppId`) and `main.ts`
+ * both call this, including at the same time. Production does not set
+ * `ignoreDuplicate`, so a second `createRxDatabase` would throw.
+ */
+export function getDatabase(): Promise<RxDatabase> {
+  if (!databasePromise) {
+    databasePromise = initializeDatabase().catch((error) => {
+      databasePromise = null
+      throw error
+    })
+  }
+  return databasePromise
+}
+
+async function initializeDatabase(): Promise<RxDatabase> {
   const PASSWORD = await getOrCreateDbPassword()
 
   await clearStorageIfFirstInstall()
@@ -328,7 +344,8 @@ export async function getDatabase(): Promise<RxDatabase> {
         }
         dbInstance = null
       }
-      return await getDatabase()
+      databasePromise = null
+      return getDatabase()
     }
     throw error
   }
