@@ -5,6 +5,7 @@
 import "fake-indexeddb/auto";
 import "core-js/stable/structured-clone";
 import { IndexedDbEntityStorageAdapter } from "../IndexedDbEntityStorageAdapter";
+import { MAX_SEARCH_REGEX_LENGTH } from "../searchRegex";
 import { EntityDoc, EntityType } from "../../interfaces/types";
 
 describe("IndexedDbEntityStorageAdapter", () => {
@@ -287,5 +288,18 @@ describe("IndexedDbEntityStorageAdapter", () => {
     await defaultAdapter.initialize();
     const defaultSavedEntity = await defaultAdapter.getEntity("1");
     expect(defaultSavedEntity).toBeNull();
+  });
+
+  test("searchEntities rejects an over-long $regex operand", async () => {
+    const pattern = "a".repeat(MAX_SEARCH_REGEX_LENGTH + 1);
+    await expect(adapter.searchEntities([{ name: { $regex: pattern } }])).rejects.toThrow(/maximum length/);
+  });
+
+  test("searchEntities rejects a nested-quantifier $regex operand", async () => {
+    await expect(adapter.searchEntities([{ name: { $regex: "(a+)+" } }])).rejects.toThrow(/nested quantifiers/);
+  });
+
+  test("searchEntities rejects a $regex operand the engine cannot compile", async () => {
+    await expect(adapter.searchEntities([{ name: { $regex: "(unclosed" } }])).rejects.toThrow(SyntaxError);
   });
 });

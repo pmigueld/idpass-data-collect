@@ -23,6 +23,7 @@ import { EntityPair, EntityStorageAdapter, SearchCriteria } from "../interfaces/
 import { createLogger } from "../utils/logger";
 import { createDrizzleFromPool, DrizzleDatabase, withClient } from "../db/connection";
 import { entities, potentialDuplicates } from "../db/schema";
+import { assertBoundedSearchRegex } from "./searchRegex";
 
 const log = createLogger("PostgresEntityStorageAdapter");
 
@@ -341,13 +342,6 @@ export class PostgresEntityStorageAdapter implements EntityStorageAdapter {
     // Keys may only contain alphanumeric characters, underscores, and dots.
     const SAFE_KEY_PATTERN = /^[a-zA-Z0-9_.]+$/;
 
-    // Maximum allowed length for user-supplied regex patterns to prevent ReDoS
-    const MAX_REGEX_LENGTH = 100;
-
-    // Detects nested quantifiers that can cause catastrophic backtracking (ReDoS).
-    // Matches patterns like (a+)+, (a*)+, (a+)*, (a{2,})+ etc.
-    const NESTED_QUANTIFIER_PATTERN = /[+*}?]\s*\)[\s]*[+*{?]/;
-
     // Build parameterized SQL conditions for JSONB search.
     // Field keys are validated against an allowlist and then used with sql.raw()
     // (PostgreSQL JSONB ->> does not support parameterized key names).
@@ -389,13 +383,7 @@ export class PostgresEntityStorageAdapter implements EntityStorageAdapter {
         }
 
         if (operator === "$regex") {
-          const regexValue = String(operandValue);
-          if (regexValue.length > MAX_REGEX_LENGTH) {
-            throw new Error(`Regex pattern exceeds maximum length of ${MAX_REGEX_LENGTH} characters`);
-          }
-          if (NESTED_QUANTIFIER_PATTERN.test(regexValue)) {
-            throw new Error("Regex pattern contains nested quantifiers which may cause catastrophic backtracking");
-          }
+          const regexValue = assertBoundedSearchRegex(operandValue);
           return sql`((${initialPath}) ~* ${regexValue} OR (${modifiedPath}) ~* ${regexValue})`;
         }
 

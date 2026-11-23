@@ -29,6 +29,7 @@ import fs from "fs/promises";
 import YAML from "yamljs";
 import { Pool } from "pg";
 import { errorHandler, notFoundHandler, setupUncaughtHandlers } from "./middlewares/errorHandlers";
+import { createIpRateLimiter, RATE_LIMITS } from "./middlewares/rateLimit";
 import { createAppConfigRoutes } from "./routes/appConfigRoutes";
 import { createConflictRouter } from "./routes/conflictRoutes";
 import { createEntitiesRouter } from "./routes/entitiesRoute";
@@ -208,7 +209,8 @@ export async function run(config: SyncServerConfig): Promise<SyncServerInstance>
     await telemetryStore.initialize();
   }
 
-  app.get("/health", async (_req, res) => {
+  const healthLimiter = createIpRateLimiter(RATE_LIMITS.health);
+  app.get("/health", healthLimiter, async (_req, res) => {
     const timestamp = new Date().toISOString();
     try {
       await healthCheckPool.query("SELECT 1");
@@ -233,7 +235,8 @@ export async function run(config: SyncServerConfig): Promise<SyncServerInstance>
     app.use("/api/admin/devices", createAdminDevicesRouter(userStore, telemetryStore));
   }
 
-  app.get("/artifacts/:artifactId.json", async (req, res, next) => {
+  const artifactLimiter = createIpRateLimiter(RATE_LIMITS.artifacts);
+  app.get("/artifacts/:artifactId.json", artifactLimiter, async (req, res, next) => {
     try {
       const { artifactId } = req.params;
       const appConfig = await appConfigStore.getConfigByArtifactId(artifactId);
@@ -252,7 +255,7 @@ export async function run(config: SyncServerConfig): Promise<SyncServerInstance>
     }
   });
 
-  app.get("/artifacts/:artifactId.png", async (req, res, next) => {
+  app.get("/artifacts/:artifactId.png", artifactLimiter, async (req, res, next) => {
     try {
       const { artifactId } = req.params;
       const appConfig = await appConfigStore.getConfigByArtifactId(artifactId);

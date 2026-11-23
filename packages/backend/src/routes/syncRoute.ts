@@ -37,6 +37,7 @@ import { AppInstanceStore, Role } from "../types";
 import { createLogger } from "../utils/logger";
 import { processTransactionalBatch } from "../utils/transactionalEdm";
 import { stripServerManagedEventFields } from "../utils/eventSanitize";
+import { createIpRateLimiter, RATE_LIMITS } from "../middlewares/rateLimit";
 import { SyncEventStore } from "../stores/SyncEventStore";
 import { SyncJobRegistry } from "../stores/SyncJobRegistry";
 import { SyncTelemetryStore } from "../stores/SyncTelemetryStore";
@@ -140,6 +141,7 @@ export function createSyncRouter(
   telemetryStore?: SyncTelemetryStore,
 ): Router {
   const router = Router();
+  const syncLimiter = createIpRateLimiter(RATE_LIMITS.sync);
 
   // Create a shared pool for transactional batch processing, reused across requests
   const txPool = postgresUrl ? new Pool({ connectionString: postgresUrl }) : null;
@@ -238,6 +240,7 @@ export function createSyncRouter(
 
   router.get(
     "/pull",
+    syncLimiter,
     createDynamicAuthMiddleware(appInstanceStore),
     validateTenantAccess,
     createScopeContextMiddleware(appInstanceStore),
@@ -372,6 +375,7 @@ export function createSyncRouter(
 
   router.get(
     "/pull/callback",
+    syncLimiter,
     createDynamicAuthMiddleware(appInstanceStore),
     validateTenantAccess,
     asyncHandler(async (req, res) => {
@@ -388,6 +392,7 @@ export function createSyncRouter(
 
   router.post(
     "/push",
+    syncLimiter,
     createDynamicAuthMiddleware(appInstanceStore),
     validateTenantAccess,
     createScopeContextMiddleware(appInstanceStore, { source: "body", defaultConfigId: "default" }),
