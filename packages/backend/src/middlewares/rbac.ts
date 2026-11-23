@@ -167,28 +167,6 @@ function getAuthorizedUser(
   return { user, effectiveRole };
 }
 
-export function requireRole(minimumRole: SystemRole) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const auth = getAuthorizedUser(req, res);
-    if (!auth) return;
-    if (auth === "admin") { next(); return; }
-
-    if (!auth.effectiveRole) {
-      log.warn({ userId: auth.user.id, minimumRole }, "No role assignments found for user");
-      res.status(403).json({ error: "Forbidden: Insufficient role", required: minimumRole });
-      return;
-    }
-
-    if (!rbacService.hasPermission(auth.effectiveRole, minimumRole)) {
-      log.warn({ userId: auth.user.id, effectiveRole: auth.effectiveRole, minimumRole }, "Insufficient role");
-      res.status(403).json({ error: "Forbidden: Insufficient role", required: minimumRole });
-      return;
-    }
-
-    next();
-  };
-}
-
 /**
  * Middleware that enforces permission for a specific action.
  *
