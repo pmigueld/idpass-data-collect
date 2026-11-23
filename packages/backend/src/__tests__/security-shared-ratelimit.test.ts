@@ -7,7 +7,7 @@ import fs from "fs/promises";
 import path from "path";
 import request from "supertest";
 import express from "express";
-import bodyParser from "body-parser";
+import { jsonBody } from "../middlewares/jsonBody";
 import { createIpRateLimiter, RATE_LIMITS } from "../middlewares/rateLimit";
 import { createUserRoutes } from "../routes/userRoutes";
 import { Role, UserStore, UserWithPasswordHash } from "../types";
@@ -94,7 +94,7 @@ describe("POST /api/users/refresh rate limit", () => {
 
   it("rejects further refresh attempts after the configured limit", async () => {
     const app = express();
-    app.use(bodyParser.json());
+    app.use(jsonBody());
     app.use("/api/users", createUserRoutes(buildUserStore()));
 
     let blocked = false;

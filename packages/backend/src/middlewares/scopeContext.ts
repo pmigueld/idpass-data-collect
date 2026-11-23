@@ -32,7 +32,7 @@ export interface RequestScope {
 export type ScopeAwareRequest = AuthenticatedRequest & { scope?: RequestScope };
 
 export interface ScopeContextOptions {
-  /** Where to read `configId` from. `"body"` requires `bodyParser.json()` to have run earlier in the chain. */
+  /** Where to read `configId` from. `"body"` requires `jsonBody()` to have run earlier in the chain. */
   source?: "query" | "body";
   /**
    * When set, the middleware falls back to this configId instead of returning

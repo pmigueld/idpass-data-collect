@@ -18,7 +18,7 @@
  */
 
 import { Router } from "express";
-import bodyParser from "body-parser";
+import { jsonBody } from "../middlewares/jsonBody";
 import { Pool } from "pg";
 import {
   ExternalSyncCredentials,
@@ -236,7 +236,7 @@ export function createSyncRouter(
 
   // Apply increased body parser limit only to sync routes that handle biometric data
   // This prevents DoS attacks on other endpoints while allowing large biometric payloads
-  router.use(bodyParser.json({ limit: "50mb" }));
+  router.use(jsonBody({ limit: "50mb" }));
 
   router.get(
     "/pull",

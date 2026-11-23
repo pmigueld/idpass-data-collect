@@ -18,7 +18,7 @@
  */
 
 import bcrypt from "bcrypt";
-import bodyParser from "body-parser";
+import { jsonBody } from "./middlewares/jsonBody";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
@@ -172,7 +172,7 @@ export async function run(config: SyncServerConfig): Promise<SyncServerInstance>
     logger,
     genReqId: () => crypto.randomUUID(),
   }));
-  app.use(bodyParser.json({ limit: "1mb" }));
+  app.use(jsonBody({ limit: "1mb" }));
   // Static serving below returns files that already exist under public/artifacts.
   // The limiter has to run first or those downloads never reach the routes.
   const artifactLimiter = createIpRateLimiter(RATE_LIMITS.artifacts);
