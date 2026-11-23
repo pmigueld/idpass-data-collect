@@ -23,7 +23,7 @@ export interface AuthAdapter {
 
 ## Implementation Pattern
 
-For simple authentication systems, follow the `MockAuthAdapter` pattern:
+For simple authentication systems, use this shape:
 
 ```typescript
 import { AuthAdapter, AuthConfig, SingleAuthStorage } from "../packages/datacollect/api/interfaces/types";
@@ -418,5 +418,4 @@ export class CustomHeaderAuthAdapter implements AuthAdapter {
 ## Alternative Solutions
 
 - **Extend existing adapters** for similar OAuth providers
-- **Use MockAuthAdapter** for development/testing
 - **Implement multiple adapters** for different environments
