@@ -62,6 +62,7 @@ addRxPlugin(RxDBMigrationSchemaPlugin)
 // env var still tree-shake the dev paths out.
 const isDevelop = import.meta.env.VITE_DEVELOP === 'true'
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode'
+import { wrappedValidateAjvStorage } from 'rxdb/plugins/validate-ajv'
 if (isDevelop) {
   addRxPlugin(RxDBDevModePlugin)
 }
@@ -74,6 +75,11 @@ const KEY_DATABASE = Symbol('database')
 const encryptedDexieStorage = wrappedKeyEncryptionCryptoJsStorage({
   storage: getRxStorageDexie()
 })
+// Dev-mode refuses to open a database unless the top-level storage name
+// starts with "validate-". Production builds do not load the dev-mode plugin.
+const databaseStorage = isDevelop
+  ? wrappedValidateAjvStorage({ storage: encryptedDexieStorage })
+  : encryptedDexieStorage
 
 const DB_ENCRYPTION_KEY = 'rxdb_encryption_key'
 
@@ -126,7 +132,9 @@ async function clearStorageIfFirstInstall() {
     // it is persisted in secure storage and survives the clear below
     const password = await getOrCreateDbPassword()
     try {
-      await removeRxDatabase('idpass-data-collect', encryptedDexieStorage, password)
+      // rxdb 17 takes multiInstance before the encryption password.
+      // This database is opened with multiInstance: false.
+      await removeRxDatabase('idpass-data-collect', databaseStorage, false, password)
       localStorage.clear()
       sessionStorage.clear()
       await SecureStorageService.clear()
@@ -201,11 +209,12 @@ export async function getDatabase(): Promise<RxDatabase> {
   try {
     dbInstance = await createRxDatabase({
       name: 'idpass-data-collect',
-      storage: encryptedDexieStorage,
+      storage: databaseStorage,
       eventReduce: true,
       multiInstance: false,
       password: PASSWORD,
-      ignoreDuplicate: true
+      // ignoreDuplicate is rejected outside dev-mode (DB9).
+      ...(isDevelop ? { ignoreDuplicate: true } : {})
     })
   } catch (error: unknown) {
     if (
@@ -220,11 +229,11 @@ export async function getDatabase(): Promise<RxDatabase> {
       const newPassword = await getOrCreateDbPassword()
       dbInstance = await createRxDatabase({
         name: 'idpass-data-collect',
-        storage: encryptedDexieStorage,
+        storage: databaseStorage,
         eventReduce: true,
         multiInstance: false,
         password: newPassword,
-        ignoreDuplicate: true
+        ...(isDevelop ? { ignoreDuplicate: true } : {})
       })
     } else {
       throw error
@@ -300,7 +309,7 @@ export async function getDatabase(): Promise<RxDatabase> {
       await handlePasswordMismatch()
       if (dbInstance) {
         try {
-          await dbInstance.destroy()
+          await dbInstance.close()
         } catch (destroyErr) {
           console.log('Error destroying database instance:', destroyErr)
         }
