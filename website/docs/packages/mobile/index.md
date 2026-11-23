@@ -363,17 +363,6 @@ Full-screen overlay rendered by the `lockMachine` when the app is locked. Uses V
 #### AppSnackbar.vue
 Global error and notification overlay driven by the `useSnackbar` composable. Surfaces errors from auth failures, sync issues, and form validation via `v-snackbar`.
 
-#### QrScanner
-QR code scanning for app configuration loading via `@capacitor-mlkit/barcode-scanning`:
-```vue
-<template>
-  <QrScanner
-    @scan="handleScan"
-    @error="handleError"
-  />
-</template>
-```
-
 #### SaveDialog
 Modal dialog for saving data using Vuetify 3's `v-dialog`:
 ```vue
