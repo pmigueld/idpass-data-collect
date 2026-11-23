@@ -21,7 +21,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 // Fake Form.io Field base whose attach we can wrap. Defined inside the mock
 // factory (hoisted) and re-exported for the test to instantiate.
-vi.mock('formiojs', () => {
+vi.mock('@formio/js', () => {
   class FakeField {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     component: any
@@ -33,10 +33,10 @@ vi.mock('formiojs', () => {
       return ['original-ref', element]
     }
   }
-  return { default: { Components: { components: { field: FakeField } } } }
+  return { Formio: { Components: { components: { field: FakeField } } } }
 })
 
-import Formio from 'formiojs'
+import { Formio } from '@formio/js'
 import {
   applyInjiVerifiableDecoration,
   __resetInjiVerifiableDecorationForTest

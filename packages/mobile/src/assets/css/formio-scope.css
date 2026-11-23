@@ -1,10 +1,9 @@
 /*
  * Formio Bootstrap Isolation + Humanitarian Tech Polish
  *
- * Bootstrap CSS is loaded ONLY within .formio-container, preventing conflicts
- * with Vuetify's global styles. The @layer directive gives Bootstrap lower
- * cascade priority than Vuetify and app styles, so .formio-container overrides
- * always win.
+ * Bootstrap and Font Awesome are loaded in the `formio-bootstrap` layer so
+ * they lose to Vuetify and to the unlayered rules below. Those rules restyle
+ * every control inside .formio-container.
  *
  * Everything below the @layer block enforces a single, consistent visual
  * treatment for every Formio input — text, textarea, native select, Choices.js
@@ -12,10 +11,11 @@
  * component on mobile rather than a stack of fighting widgets.
  */
 
-@layer formio-bootstrap {
-  @import 'bootstrap/dist/css/bootstrap.min.css';
-  @import 'font-awesome/css/font-awesome.min.css';
-}
+/* Top-level `@import ... layer()` so Vite inlines the stylesheets. An
+ * `@import` nested inside `@layer { }` is valid CSS but is dropped from the
+ * production bundle, which leaves forms without Bootstrap or Font Awesome. */
+@import 'bootstrap/dist/css/bootstrap.min.css' layer(formio-bootstrap);
+@import 'font-awesome/css/font-awesome.min.css' layer(formio-bootstrap);
 
 /* ---------------------------------------------------------------------------
  * Layout: vertical rhythm
@@ -520,7 +520,11 @@
  *     control height never drifts.
  *
  *  3. Strip any inner shadow / inset border on input-group children that
- *     the formio base CSS adds via the bootstrap 4 input-group cascade.
+ *     the formio base CSS adds on grouped controls. Bootstrap 5 templates
+ *     place `.input-group-text` directly in the flex group (no
+ *     `.input-group-append` / `.input-group-prepend` wrapper). The append
+ *     and prepend rules below stay so a component that still emits those
+ *     wrappers keeps a single frame.
  * ------------------------------------------------------------------------- */
 
 /* (1) Datetime: hide the OS-native mobile shim that flatpickr injects

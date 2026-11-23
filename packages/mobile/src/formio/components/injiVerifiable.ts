@@ -28,7 +28,7 @@
  * must not inject duplicate nodes.
  */
 
-import Formio from 'formiojs'
+import { Formio } from '@formio/js'
 import { useInjiVerification, type InjiFormRoot } from '@/composables/useInjiVerification'
 
 const WRAP_FLAG = '__injiVerifiableWrapped'

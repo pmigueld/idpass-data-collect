@@ -19,7 +19,7 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        // Bootstrap 4 (compiled scoped in src/formio/builder-theme.scss)
+        // Bootstrap 5 (compiled scoped in src/formio/builder-theme.scss)
         // predates modern Sass: silence its deprecation noise, plus the
         // `@import` deprecation our scoping pattern relies on (nested
         // `@import` has no `@use` equivalent).

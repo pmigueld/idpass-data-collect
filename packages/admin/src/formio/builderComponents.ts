@@ -380,7 +380,9 @@ export function registerBuilderComponents(): void {
       return {
         title: 'Claim-169 Scanner',
         group: 'advanced',
-        icon: 'qrcode',
+        // Bootstrap Icons name. Form.io 5's default icon set has `qr-code`,
+        // not Font Awesome 4's `qrcode`.
+        icon: 'qr-code',
         weight: 10,
         documentation: '#',
         schema: Claim169Scanner.schema(),

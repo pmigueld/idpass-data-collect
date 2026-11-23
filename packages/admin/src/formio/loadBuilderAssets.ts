@@ -25,9 +25,10 @@
 //
 // - formio.full.min.css: Form.io's own builder/dialog/choices/flatpickr styles
 //   (prefixed selectors, safe to load globally).
-// - font-awesome: glyphs used by Form.io component icons (.fa-* only, safe
-//   globally; fonts are bundled and hashed by Vite).
-// - builder-theme.scss: Bootstrap 4 compiled with ID PASS design-token
+// - font-awesome: glyphs for markup that still uses `.fa` (safe globally;
+//   fonts are bundled and hashed by Vite). Form.io 5's own palette uses
+//   Bootstrap Icons, whose font ships inside formio.full.min.css.
+// - builder-theme.scss: Bootstrap 5 compiled with ID PASS design-token
 //   variables and scoped under .formio-builder-host / .formio-dialog, plus
 //   the ID PASS builder chrome. See that file for the scoping rationale.
 import '@formio/js/dist/formio.full.min.css'
